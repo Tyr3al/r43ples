@@ -8,6 +8,7 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.log4j.Logger;
 import org.glassfish.grizzly.http.server.CLStaticHttpHandler;
 import org.glassfish.grizzly.http.server.HttpServer;
+import org.glassfish.grizzly.http.server.NetworkListener;
 import org.glassfish.grizzly.ssl.SSLContextConfigurator;
 import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
@@ -17,14 +18,18 @@ import org.glassfish.jersey.server.mvc.mustache.MustacheMvcFeature;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.ParameterException;
-import com.hp.hpl.jena.query.Dataset;
 
 import de.tud.plt.r43ples.client.R43plesArgs;
 import de.tud.plt.r43ples.management.Config;
 import de.tud.plt.r43ples.management.GitRepositoryState;
 import de.tud.plt.r43ples.triplestoreInterface.TripleStoreInterfaceSingleton;
+import de.tud.plt.r43ples.webservice.API;
+import de.tud.plt.r43ples.webservice.Configuration;
+import de.tud.plt.r43ples.webservice.Debug;
 import de.tud.plt.r43ples.webservice.Endpoint;
 import de.tud.plt.r43ples.webservice.ExceptionMapper;
+import de.tud.plt.r43ples.webservice.Merging;
+import de.tud.plt.r43ples.webservice.Misc;
 
 
 /**
@@ -41,8 +46,6 @@ public class R43plesService {
 	private static Logger logger = Logger.getLogger(R43plesService.class);
 	/** The HTTP server. **/
 	private static HttpServer server;
-	/** The TDB dataset. **/
-	public static Dataset dataset;
 	
 	
 	/**
@@ -102,7 +105,12 @@ public class R43plesService {
 		URI BASE_URI;
 		
 		ResourceConfig rc = new ResourceConfig()
-			.registerClasses(Endpoint.class)
+			.registerClasses(Endpoint.class, 
+					Misc.class,
+					API.class, 
+					Configuration.class, 
+					Debug.class, 
+					Merging.class)
 			.property(MustacheMvcFeature.TEMPLATE_BASE_PATH, "templates")
 			.register(MustacheMvcFeature.class)
 			.register(ExceptionMapper.class)
@@ -127,6 +135,9 @@ public class R43plesService {
 			BASE_URI = new URI("http", null, Config.service_host, Config.service_port, Config.service_path, null, null);
 			server = GrizzlyHttpServerFactory.createHttpServer(BASE_URI, rc);			
 		}
+		
+		for (NetworkListener l : server.getListeners()) { l.getFileCache().setEnabled(false); }
+		logger.info("File cache disabled");
 		
 		server.getServerConfiguration().addHttpHandler(
 		        new CLStaticHttpHandler(R43plesService.class.getClassLoader(),"webapp/"), "/static/");

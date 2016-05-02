@@ -1,4 +1,4 @@
-!/#bin/bash
+#!/bin/bash
 
 #
 # This script is run by travis-ci and pushes the first commit
@@ -6,6 +6,11 @@
 #
 
 COMMITS=`git log --since=today.midnight --oneline | wc -l`
+
+if [ "$TRAVIS_BRANCH" != "develop" ]; then 
+    echo "Not on develop branch -> no update of coverity_scan!"
+    exit 0;
+fi
 
 if [[ "$COMMITS" -le "1" ]]; then
     echo "first commit a day - push changes to branch coverity_scan"
@@ -16,9 +21,8 @@ if [[ "$COMMITS" -le "1" ]]; then
 
     git fetch origin +coverity_scan:coverity_scan
     git checkout coverity_scan
-    git merge --ff --log -m "merge from master to coverity_scan" origin/master
+    git merge --ff --log -m "merge from develop to coverity_scan" origin/develop
     git push https://$GITAUTH@github.com/plt-tud/r43ples
-    git checkout master
 else
     echo "Already pushed to coverity_scan today"
 fi 

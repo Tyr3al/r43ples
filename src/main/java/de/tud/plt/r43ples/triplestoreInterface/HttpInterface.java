@@ -10,7 +10,6 @@ import java.util.List;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpException;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.auth.AuthScope;
@@ -66,8 +65,6 @@ public class HttpInterface extends TripleStoreInterface {
 	 * 
 	 * @param query the SPARQL query
 	 * @return the result of the query in XML serialisation
-	 * @throws IOException 
-	 * @throws HttpException 
 	 */
 	private InputStream executeQueryWithAuthorization(String query) {
 		return executeQueryWithAuthorization(query, "application/sparql-results+xml");
@@ -81,12 +78,10 @@ public class HttpInterface extends TripleStoreInterface {
 	 * @param query the SPARQL query
 	 * @param format the format of the result (e.g. HTML, xml/rdf, JSON, ...)
 	 * @return the result of the query in the specified format
-	 * @throws IOException 
-	 * @throws HttpException 
 	 */
 	private InputStream executeQueryWithAuthorization(String query, String format) {
 		HttpResponse response = executeQueryWithAuthorizationResponse(query, format);
-		logger.debug("Statuscode: " + response.getStatusLine().getStatusCode());
+		logger.info("Statuscode: " + response.getStatusLine().getStatusCode());
 		try{
 			InputStream in = response.getEntity().getContent();
 			if (response.getStatusLine().getStatusCode() != Status.OK.getStatusCode()) {
@@ -108,9 +103,6 @@ public class HttpInterface extends TripleStoreInterface {
 	 * @param query the SPARQL query
 	 * @param format the format of the result (e.g. HTML, xml/rdf, JSON, ...)
 	 * @return the result of the query in the specified format
-	 * @throws  
-	 * @throws IOException 
-	 * @throws HttpException 
 	 */
 	private HttpResponse executeQueryWithAuthorizationResponse(String query, String format) {
 		logger.debug("Execute query on SPARQL endpoint:\n"+ query);
@@ -126,7 +118,7 @@ public class HttpInterface extends TripleStoreInterface {
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 		}
-    	request.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+    	//request.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
     	request.setHeader("Accept", format);
     	
 		//Execute Query
@@ -169,12 +161,12 @@ public class HttpInterface extends TripleStoreInterface {
 
 	@Override
 	public boolean executeAskQuery(String askQueryString) {
-		InputStream result = executeQueryWithAuthorization(askQueryString, "text/boolean");
+		InputStream result = executeQueryWithAuthorization(askQueryString, "application/sparql-results+xml");
 		String answer;
 		try {
 			answer = IOUtils.toString(result);
 			result.close();
-			return answer.equals("true");
+			return answer.contains("<boolean>true</boolean>");
 		} catch (IOException e) {
 			e.printStackTrace();
 			return false;

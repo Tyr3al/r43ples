@@ -16,8 +16,6 @@ import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.Mustache;
 import com.github.mustachejava.MustacheFactory;
 
-import de.tud.plt.r43ples.management.GitRepositoryState;
-
 @Provider
 public class ExceptionMapper implements
 		javax.ws.rs.ext.ExceptionMapper<Throwable> {
@@ -29,16 +27,14 @@ public class ExceptionMapper implements
 	@Override
 	public Response toResponse(Throwable e) {
 		logger.error(e.getMessage(), e);
-		
 		MustacheFactory mf = new DefaultMustacheFactory();
 	    Mustache mustache = mf.compile("templates/error.mustache");
 	    StringWriter sw = new StringWriter();
 	    
 	    Map<String, Object> htmlMap = new HashMap<String, Object>();
-	    htmlMap.put("version", Endpoint.class.getPackage().getImplementationVersion() );
-	    htmlMap.put("git", GitRepositoryState.getGitRepositoryState());
 		htmlMap.put("error", e);
-		htmlMap.put("request", request.getMethod() );
+		if (request!=null)
+			htmlMap.put("request", request.getMethod() );
 		
 		mustache.execute(sw, htmlMap);
 		String content = sw.toString();
