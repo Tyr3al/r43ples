@@ -10,6 +10,7 @@ import org.apache.log4j.Logger;
 
 import de.tud.plt.r43ples.exception.InternalErrorException;
 import de.tud.plt.r43ples.exception.QueryErrorException;
+import de.tud.plt.r43ples.merge.RebaseControl;
 import de.tud.plt.r43ples.merging.MergeManagement;
 import de.tud.plt.r43ples.merging.MergeQueryTypeEnum;
 import de.tud.plt.r43ples.merging.MergeResult;
@@ -187,7 +188,7 @@ public class Interface {
 			queryRewritten += "}";
 		}
 
-		logger.info("Rewritten query for update: " + queryRewritten);
+		logger.debug("Rewritten query for update: " + queryRewritten);
 
 		// (IIIa) Remove empty insert clauses which otherwise will lead to
 		// errors
@@ -353,7 +354,7 @@ public class Interface {
 		MergeResult mresult = new MergeResult(graphName, branchNameA, branchNameB);
 
 		if (!RevisionManagement.checkGraphExistence(graphName)) {
-			logger.error("Graph <" + graphName + "> does not exist.");
+			logger.warn("Graph <" + graphName + "> does not exist.");
 			throw new InternalErrorException("Graph <" + graphName + "> does not exist.");
 		}
 
