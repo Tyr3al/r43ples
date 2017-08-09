@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JenaTDBInterface.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.triplestoreInterface</a> &gt; <span class="el_source">JenaTDBInterface.java</span></div><h1>JenaTDBInterface.java</h1><pre class="source lang-java linenums">package de.tud.plt.r43ples.triplestoreInterface;
+
+import java.io.File;
+import java.util.Iterator;
+
+import org.apache.log4j.Logger;
+
+import com.hp.hpl.jena.query.Dataset;
+import com.hp.hpl.jena.query.QueryExecution;
+import com.hp.hpl.jena.query.QueryExecutionFactory;
+import com.hp.hpl.jena.query.ReadWrite;
+import com.hp.hpl.jena.query.ResultSet;
+import com.hp.hpl.jena.rdf.model.Model;
+import com.hp.hpl.jena.tdb.TDBFactory;
+import com.hp.hpl.jena.update.GraphStore;
+import com.hp.hpl.jena.update.GraphStoreFactory;
+import com.hp.hpl.jena.update.UpdateExecutionFactory;
+import com.hp.hpl.jena.update.UpdateFactory;
+import com.hp.hpl.jena.update.UpdateProcessor;
+import com.hp.hpl.jena.update.UpdateRequest;
+
+
+/** 
+ * Provides a interface to the TDB triple store.
+ *
+ * @author Stephan Hensel
+ * @author Markus Graube
+ *
+ */
+public class JenaTDBInterface extends TripleStoreInterface {
+
+	/** The TDB dataset. **/
+	private static Dataset dataset;
+	/** The logger. */
+<span class="fc" id="L35">	private static Logger logger = Logger.getLogger(JenaTDBInterface.class);</span>
+	
+
+	/**
+	 * The constructor.
+	 * 
+	 * @param databaseDirectory the database directory of TDB
+	 */
+<span class="fc" id="L43">	public JenaTDBInterface(String databaseDirectory) {</span>
+
+    	// if the directory does not exist, create it
+<span class="fc" id="L46">		File theDir = new File(databaseDirectory);</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">		if (!theDir.exists()) {</span>
+<span class="fc" id="L48">			logger.info(&quot;creating directory: &quot; + theDir.toString());</span>
+<span class="pc bpc" id="L49" title="1 of 2 branches missed.">		    if (theDir.mkdirs())</span>
+<span class="fc" id="L50">		    	logger.info(&quot;Directory successfully created&quot;);</span>
+		    else
+<span class="nc" id="L52">		    	logger.error(&quot;Could not create directory&quot;);</span>
+		  }
+		
+		// Initialize the database
+<span class="fc" id="L56">		dataset = TDBFactory.createDataset(databaseDirectory);</span>
+<span class="fc" id="L57">	}</span>
+	
+	@Override
+	public void close() {
+<span class="fc" id="L61">		dataset.close();</span>
+<span class="fc" id="L62">	}</span>
+	
+	
+	
+	/**
+	 * Executes a SELECT query.
+	 * 
+	 * @param selectQueryString the SELECT query
+	 * @return result set
+	 */
+	@Override
+	public ResultSet executeSelectQuery(String selectQueryString) {
+<span class="fc" id="L74">		dataset.begin(ReadWrite.READ);</span>
+<span class="fc" id="L75">		logger.debug(selectQueryString);</span>
+<span class="fc" id="L76">		QueryExecution qExec = QueryExecutionFactory.create(selectQueryString, dataset);</span>
+
+<span class="fc" id="L78">		ResultSet result = qExec.execSelect();</span>
+<span class="fc" id="L79">		dataset.end();</span>
+<span class="fc" id="L80">		return result;</span>
+	}
+	
+	
+	/**
+	 * Executes a CONSTRUCT query.
+	 * 
+	 * @param constructQueryString the CONSTRUCT query
+	 * @return model
+	 */
+	@Override
+	public Model executeConstructQuery(String constructQueryString) {
+<span class="fc" id="L92">		dataset.begin(ReadWrite.READ);</span>
+<span class="fc" id="L93">		QueryExecution qExec = QueryExecutionFactory.create(constructQueryString, dataset);</span>
+<span class="fc" id="L94">		Model result = qExec.execConstruct();</span>
+<span class="fc" id="L95">		qExec.close();</span>
+<span class="fc" id="L96">		dataset.end();</span>
+<span class="fc" id="L97">		return result;</span>
+	}
+	
+	
+	
+	/**
+	 * Executes a DESCRIBE query.
+	 * 
+	 * @param describeQueryString the DESCRIBE query
+	 * @return model
+	 */
+	@Override
+	public Model executeDescribeQuery(String describeQueryString) {
+<span class="nc" id="L110">		logger.debug(&quot;Query: &quot; + describeQueryString);</span>
+<span class="nc" id="L111">		dataset.begin(ReadWrite.READ);</span>
+<span class="nc" id="L112">		QueryExecution qExec = QueryExecutionFactory.create(describeQueryString, dataset);</span>
+<span class="nc" id="L113">		Model result = qExec.execDescribe();</span>
+<span class="nc" id="L114">		qExec.close();</span>
+<span class="nc" id="L115">		dataset.end();</span>
+<span class="nc" id="L116">		return result;</span>
+	}
+	
+
+	/**
+	 * Executes an ASK query.
+	 * 
+	 * @param askQueryString the ASK query
+	 * @return boolean result of ASK query
+	 */
+	@Override
+	public boolean executeAskQuery(String askQueryString) {
+<span class="fc" id="L128">		dataset.begin(ReadWrite.READ);</span>
+<span class="fc" id="L129">		QueryExecution qe = QueryExecutionFactory.create(askQueryString, dataset);</span>
+<span class="fc" id="L130">		boolean result = qe.execAsk();</span>
+<span class="fc" id="L131">		qe.close();</span>
+<span class="fc" id="L132">		dataset.end();</span>
+
+<span class="fc" id="L134">		return result;</span>
+	}
+	
+	/**
+	 * Executes an UPDATE query.
+	 * 
+	 * @param updateQueryString the UPDATE query
+	 */
+	@Override
+	public void executeUpdateQuery(String updateQueryString) {
+<span class="fc" id="L144">		logger.debug(&quot;Query:&quot; + updateQueryString);</span>
+<span class="fc" id="L145">		dataset.begin(ReadWrite.WRITE);</span>
+		
+<span class="fc" id="L147">		GraphStore graphStore = GraphStoreFactory.create(dataset) ;</span>
+		
+<span class="fc" id="L149">	    UpdateRequest request = UpdateFactory.create(updateQueryString) ;</span>
+<span class="fc" id="L150">	    UpdateProcessor proc = UpdateExecutionFactory.create(request, graphStore) ;</span>
+<span class="fc" id="L151">	    proc.execute();</span>
+<span class="fc" id="L152">	    dataset.commit();</span>
+<span class="fc" id="L153">		dataset.end();</span>
+<span class="fc" id="L154">	}</span>
+	
+
+	@Override
+	public void executeCreateGraph(String graph) {
+<span class="fc" id="L159">		dataset.begin(ReadWrite.WRITE);</span>
+		
+<span class="fc" id="L161">		GraphStore graphStore = GraphStoreFactory.create(dataset) ;</span>
+
+<span class="fc" id="L163">	    UpdateRequest request = UpdateFactory.create(&quot;CREATE GRAPH &lt;&quot;+graph+&quot;&gt;&quot;) ;</span>
+<span class="fc" id="L164">	    UpdateProcessor proc = UpdateExecutionFactory.create(request, graphStore) ;</span>
+<span class="fc" id="L165">	    proc.execute();</span>
+
+<span class="fc" id="L167">	    dataset.commit();</span>
+<span class="fc" id="L168">		dataset.end();</span>
+<span class="fc" id="L169">	}</span>
+
+	@Override
+	public Iterator&lt;String&gt; getGraphs() {
+<span class="fc" id="L173">		dataset.begin(ReadWrite.READ);</span>
+<span class="fc" id="L174">		Iterator&lt;String&gt; list = dataset.listNames();</span>
+<span class="fc" id="L175">		dataset.end();</span>
+<span class="fc" id="L176">		return list;</span>
+	}
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

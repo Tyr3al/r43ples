@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProcessManagement.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.merging.management</a> &gt; <span class="el_source">ProcessManagement.java</span></div><h1>ProcessManagement.java</h1><pre class="source lang-java linenums">package de.tud.plt.r43ples.merging.management;
+
+import java.util.Iterator;
+import java.util.Map.Entry;
+
+import org.apache.log4j.Logger;
+
+import com.hp.hpl.jena.query.QueryExecution;
+import com.hp.hpl.jena.query.QueryExecutionFactory;
+import com.hp.hpl.jena.query.QuerySolution;
+import com.hp.hpl.jena.query.ResultSet;
+import com.hp.hpl.jena.rdf.model.Model;
+
+import de.tud.plt.r43ples.management.Config;
+import de.tud.plt.r43ples.merging.ResolutionStateEnum;
+import de.tud.plt.r43ples.merging.SDDTripleStateEnum;
+import de.tud.plt.r43ples.merging.TripleObjectTypeEnum;
+import de.tud.plt.r43ples.merging.model.structure.Difference;
+import de.tud.plt.r43ples.merging.model.structure.DifferenceGroup;
+import de.tud.plt.r43ples.merging.model.structure.DifferenceModel;
+import de.tud.plt.r43ples.merging.model.structure.HighLevelChangeModel;
+import de.tud.plt.r43ples.merging.model.structure.HighLevelChangeRenaming;
+import de.tud.plt.r43ples.merging.model.structure.HighLevelChangeTableModel;
+import de.tud.plt.r43ples.merging.model.structure.HighLevelChangeTableRow;
+import de.tud.plt.r43ples.merging.model.structure.Triple;
+import de.tud.plt.r43ples.triplestoreInterface.TripleStoreInterfaceSingleton;
+
+
+
+
+<span class="nc" id="L31">public class ProcessManagement {</span>
+	/** The logger. */
+<span class="nc" id="L33">	private static Logger logger = Logger.getLogger(ProcessManagement.class);</span>
+	
+	
+	/**
+	 * Read difference model to java representation.
+	 * 
+	 * @param differenceModelToRead the difference model to read in turtle serialisation
+	 * @param differenceModel the difference model where the result should be stored
+	 * @return 
+	 */
+	public static DifferenceModel readDifferenceModel(Model model) {
+<span class="nc" id="L44">		DifferenceModel differenceModel =  new DifferenceModel();</span>
+		
+		
+		// Query all difference groups
+<span class="nc" id="L48">		String queryDifferenceGroups = Config.prefixes + </span>
+				  &quot;SELECT ?uri ?tripleStateA ?tripleStateB ?automaticResolutionState ?conflicting &quot;
+				+ &quot;WHERE { &quot;
+				+ &quot;	?uri a rpo:DifferenceGroup ; &quot;
+				+ &quot;		sddo:hasTripleStateA ?tripleStateA ; &quot;
+				+ &quot;		sddo:hasTripleStateB ?tripleStateB ; &quot;
+				+ &quot;		sddo:automaticResolutionState ?automaticResolutionState ; &quot;
+				+ &quot;		sddo:isConflicting ?conflicting . &quot;
+				+ &quot;}&quot;;
+<span class="nc" id="L57">		QueryExecution qeDifferenceGroups = QueryExecutionFactory.create(queryDifferenceGroups, model);</span>
+<span class="nc" id="L58">		ResultSet resultSetDifferenceGroups = qeDifferenceGroups.execSelect();</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">	    while(resultSetDifferenceGroups.hasNext()) {</span>
+<span class="nc" id="L60">	    	QuerySolution qsDifferenceGroups = resultSetDifferenceGroups.next();</span>
+<span class="nc" id="L61">	    	String uri = qsDifferenceGroups.getResource(&quot;?uri&quot;).toString();</span>
+<span class="nc" id="L62">	    	SDDTripleStateEnum tripleStateA = convertSDDStringToSDDTripleState(qsDifferenceGroups.getResource(&quot;?tripleStateA&quot;).toString());</span>
+<span class="nc" id="L63">	    	SDDTripleStateEnum tripleStateB = convertSDDStringToSDDTripleState(qsDifferenceGroups.getResource(&quot;?tripleStateB&quot;).toString());</span>
+<span class="nc" id="L64">	    	SDDTripleStateEnum automaticResolutionState = convertSDDStringToSDDTripleState(qsDifferenceGroups.getResource(&quot;?automaticResolutionState&quot;).toString());</span>
+<span class="nc" id="L65">	    	boolean conflicting = qsDifferenceGroups.getLiteral(&quot;?conflicting&quot;).toString().equals(&quot;true^^http://www.w3.org/2001/XMLSchema#boolean&quot;);   </span>
+<span class="nc" id="L66">	    	ResolutionStateEnum resolutionState = ResolutionStateEnum.DIFFERENCE;</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">	    	if (conflicting) {</span>
+<span class="nc" id="L68">	    		resolutionState = ResolutionStateEnum.CONFLICT;</span>
+	    	}
+	    	
+<span class="nc" id="L71">	    	DifferenceGroup differenceGroup = new DifferenceGroup(tripleStateA, tripleStateB, automaticResolutionState, conflicting);</span>
+	    	
+	    	// Query all differences
+<span class="nc" id="L74">			String queryDifferences = Config.prefixes + String.format(</span>
+					  &quot;SELECT ?subject ?predicate ?object ?referencedRevisionA ?referencedRevisionB %n&quot;
+					+ &quot;WHERE { %n&quot;
+					+ &quot;	&lt;%s&gt; a rpo:DifferenceGroup ; %n&quot;
+					+ &quot;		rpo:hasDifference ?differenceUri . %n&quot;
+					+ &quot;	?differenceUri a rpo:Difference ; %n&quot;
+					+ &quot;		rpo:hasTriple ?tripleUri . %n&quot;
+					+ &quot;	OPTIONAL { ?differenceUri rpo:referencesA ?referencedRevisionA . } %n&quot;
+					+ &quot;	OPTIONAL { ?differenceUri rpo:referencesB ?referencedRevisionB . } %n&quot;
+					+ &quot;	?tripleUri rdf:subject ?subject ; %n&quot;
+					+ &quot;		rdf:predicate ?predicate ; %n&quot;
+					+ &quot;		rdf:object ?object . %n&quot;
+					+ &quot;}&quot;, uri);
+<span class="nc" id="L87">			QueryExecution qeDifferences = QueryExecutionFactory.create(queryDifferences, model);</span>
+<span class="nc" id="L88">			ResultSet resultSetDifferences = qeDifferences.execSelect();</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">		    while(resultSetDifferences.hasNext()) {</span>
+<span class="nc" id="L90">		    	QuerySolution qsDifferences = resultSetDifferences.next();</span>
+		    	
+<span class="nc" id="L92">		    	String subject = model.qnameFor(qsDifferences.getResource(&quot;?subject&quot;).toString());</span>
+<span class="nc" id="L93">		    	String predicate = model.qnameFor(qsDifferences.getResource(&quot;?predicate&quot;).toString());</span>
+	    	
+		    	// Differ between literal and resource
+<span class="nc" id="L96">				String object = &quot;&quot;;</span>
+<span class="nc" id="L97">				TripleObjectTypeEnum objectType = null;</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">				if (qsDifferences.get(&quot;?object&quot;).isLiteral()) {</span>
+<span class="nc" id="L99">					object = qsDifferences.getLiteral(&quot;?object&quot;).toString();</span>
+<span class="nc" id="L100">					objectType = TripleObjectTypeEnum.LITERAL;</span>
+				} else {
+<span class="nc" id="L102">					object = model.qnameFor(qsDifferences.getResource(&quot;?object&quot;).toString());</span>
+<span class="nc" id="L103">					objectType = TripleObjectTypeEnum.RESOURCE;</span>
+				}
+		    	
+<span class="nc" id="L106">		    	Triple triple = new Triple(subject, predicate, object, objectType);</span>
+		    	
+<span class="nc" id="L108">		    	String referencedRevisionA = null;</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">		    	if (qsDifferences.getResource(&quot;?referencedRevisionA&quot;) != null) {</span>
+<span class="nc" id="L110">		    		referencedRevisionA = qsDifferences.getResource(&quot;?referencedRevisionA&quot;).toString();</span>
+		    	}
+<span class="nc" id="L112">		    	String referencedRevisionB = null;</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">		    	if (qsDifferences.getResource(&quot;?referencedRevisionB&quot;) != null) {</span>
+<span class="nc" id="L114">		    		referencedRevisionB = qsDifferences.getResource(&quot;?referencedRevisionB&quot;).toString();</span>
+		    	}
+		    	
+		    	// Add further information to difference
+		    	// Get the revision number if available
+<span class="nc" id="L119">		    	String referencedRevisionLabelA = null;</span>
+<span class="nc" id="L120">		    	String referencedRevisionLabelB = null;</span>
+		    	
+<span class="nc bnc" id="L122" title="All 4 branches missed.">				if ((referencedRevisionA != null) &amp;&amp; (referencedRevisionB == null)) {</span>
+<span class="nc" id="L123">					String query = Config.prefixes + String.format(</span>
+							  &quot;SELECT ?rev %n&quot;
+							+ &quot;FROM &lt;%s&gt; %n&quot;
+							+ &quot;WHERE { %n&quot;
+							+ &quot;	&lt;%s&gt; a rmo:Revision ; %n&quot;
+							+ &quot;		rmo:revisionNumber ?rev . %n&quot;
+							+ &quot;}&quot;, Config.revision_graph, referencedRevisionA);
+					
+<span class="nc" id="L131">					ResultSet resultSet = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+					
+<span class="nc bnc" id="L133" title="All 2 branches missed.">					if (resultSet.hasNext()) {</span>
+<span class="nc" id="L134">						QuerySolution qs = resultSet.next();</span>
+<span class="nc" id="L135">						referencedRevisionLabelA = qs.getLiteral(&quot;?rev&quot;).toString();</span>
+					}
+<span class="nc bnc" id="L137" title="All 4 branches missed.">				} else if ((referencedRevisionA == null) &amp;&amp; (referencedRevisionB != null)) {</span>
+<span class="nc" id="L138">					String query = Config.prefixes + String.format(</span>
+							  &quot;SELECT ?rev %n&quot;
+							+ &quot;FROM &lt;%s&gt; %n&quot;
+							+ &quot;WHERE { %n&quot;
+							+ &quot;	&lt;%s&gt; a rmo:Revision ; %n&quot;
+							+ &quot;		rmo:revisionNumber ?rev . %n&quot;
+							+ &quot;}&quot;, Config.revision_graph, referencedRevisionB);
+					
+<span class="nc" id="L146">					ResultSet resultSet = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+					
+					// Iterate over all labels
+<span class="nc bnc" id="L149" title="All 2 branches missed.">					if (resultSet.hasNext()) {</span>
+<span class="nc" id="L150">						QuerySolution qs = resultSet.next();</span>
+<span class="nc" id="L151">						referencedRevisionLabelB = qs.getLiteral(&quot;?rev&quot;).toString();</span>
+					}
+<span class="nc bnc" id="L153" title="All 4 branches missed.">				} else if ((referencedRevisionA != null) &amp;&amp; (referencedRevisionB != null)) {</span>
+<span class="nc" id="L154">					String query = Config.prefixes + String.format(</span>
+							  &quot;SELECT ?revA ?revB %n&quot;
+							+ &quot;FROM &lt;%s&gt; %n&quot;
+							+ &quot;WHERE { %n&quot;
+							+ &quot;	&lt;%s&gt; a rmo:Revision ; %n&quot;
+							+ &quot;		rmo:revisionNumber ?revA . %n&quot;
+							+ &quot;	&lt;%s&gt; a rmo:Revision ; %n&quot;
+							+ &quot;		rmo:revisionNumber ?revB . %n&quot;
+							+ &quot;}&quot;, Config.revision_graph, referencedRevisionA, referencedRevisionB);
+					
+<span class="nc" id="L164">					ResultSet resultSet = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+		
+					// Iterate over all labels
+<span class="nc bnc" id="L167" title="All 2 branches missed.">					if (resultSet.hasNext()) {</span>
+<span class="nc" id="L168">						QuerySolution qs = resultSet.next();</span>
+<span class="nc" id="L169">						referencedRevisionLabelA = qs.getLiteral(&quot;?revA&quot;).toString();</span>
+<span class="nc" id="L170">						referencedRevisionLabelB = qs.getLiteral(&quot;?revB&quot;).toString();</span>
+					}
+				}	    	
+		    	
+<span class="nc" id="L174">		    	Difference difference = new Difference(triple, </span>
+		    			referencedRevisionA, referencedRevisionLabelA, tripleStateA, 
+		    			referencedRevisionB, referencedRevisionLabelB, tripleStateB,
+		    			conflicting, automaticResolutionState, resolutionState);
+<span class="nc" id="L178">		    	differenceGroup.addDifference(triple, difference);</span>
+<span class="nc" id="L179">		    	differenceModel.addDifference(difference);</span>
+<span class="nc" id="L180">		    }</span>
+<span class="nc" id="L181">	    	differenceModel.addDifferenceGroup(differenceGroup.getTripleStateA().toString() + &quot;-&quot; + differenceGroup.getTripleStateB().toString(), differenceGroup);</span>
+<span class="nc" id="L182">	    }</span>
+	    
+<span class="nc" id="L184">	    logger.info(&quot;Difference model successfully read.&quot;);	</span>
+<span class="nc" id="L185">		return differenceModel;</span>
+	}
+	
+	
+	
+	
+	/**
+	 * Convert SDD state string to SDD triple state. If value does not exists in enum null will be returned.
+	 * 
+	 * @param state the state to convert
+	 * @return the SDD triple state
+	 */
+	
+	private static SDDTripleStateEnum convertSDDStringToSDDTripleState(String state) {
+<span class="nc bnc" id="L199" title="All 2 branches missed.">		if (state.equals(SDDTripleStateEnum.ADDED.getSddRepresentation())) {</span>
+<span class="nc" id="L200">			return SDDTripleStateEnum.ADDED;</span>
+<span class="nc bnc" id="L201" title="All 2 branches missed.">		} else if (state.equals(SDDTripleStateEnum.DELETED.getSddRepresentation())) {</span>
+<span class="nc" id="L202">			return SDDTripleStateEnum.DELETED;</span>
+<span class="nc bnc" id="L203" title="All 2 branches missed.">		} else if (state.equals(SDDTripleStateEnum.ORIGINAL.getSddRepresentation())) {</span>
+<span class="nc" id="L204">			return SDDTripleStateEnum.ORIGINAL;</span>
+<span class="nc bnc" id="L205" title="All 2 branches missed.">		} else if (state.equals(SDDTripleStateEnum.NOTINCLUDED.getSddRepresentation())) {</span>
+<span class="nc" id="L206">			return SDDTripleStateEnum.NOTINCLUDED;</span>
+		} else {
+<span class="nc" id="L208">			return null;</span>
+		}
+	}
+	
+	
+	
+	/**
+	 * Get difference by triple. If the difference model does not contain the triple null will be returned.
+	 * 
+	 * @param triple the triple to look for
+	 * @param differenceModel the difference model
+	 * @return the difference or null if triple is not included in difference model
+	 */
+	public static boolean isConflicting(Triple triple, DifferenceModel differenceModel) {
+<span class="nc bnc" id="L222" title="All 2 branches missed.">		if (differenceModel.allDifferences.contains(triple)){</span>
+<span class="nc" id="L223">			int pos = differenceModel.allDifferences.indexOf(triple);</span>
+<span class="nc" id="L224">			return differenceModel.allDifferences.get(pos).conflicting;</span>
+		}
+		else 
+<span class="nc" id="L227">			return false;</span>
+	}
+	
+
+	
+	/**create High level change Table Model from high level change Model
+	 * @param highLevelChangeModel the model to be read 
+	 * @return hightLevelChangeTableModel the Model to be created 
+	 *  */
+	public static HighLevelChangeTableModel createHighLevelChangeTableModel (HighLevelChangeModel highLevelChangeModel) {
+<span class="nc" id="L237">		HighLevelChangeTableModel highLevelChangeTableModel = new HighLevelChangeTableModel();</span>
+<span class="nc" id="L238">		Iterator&lt;Entry&lt;String, HighLevelChangeRenaming&gt;&gt; iterHL = highLevelChangeModel.getHighLevelChangesRenaming().entrySet().iterator();</span>
+<span class="nc bnc" id="L239" title="All 2 branches missed.">		while(iterHL.hasNext()){</span>
+<span class="nc" id="L240">			HighLevelChangeRenaming hlcr = iterHL.next().getValue();</span>
+			//get added Difference and deleted Difference
+<span class="nc" id="L242">			Difference additionDifference = hlcr.getAdditionDifference();</span>
+<span class="nc" id="L243">			Difference deletionDifference = hlcr.getDeletionDifference();</span>
+<span class="nc" id="L244">			Triple additionTriple = additionDifference.getTriple();</span>
+<span class="nc" id="L245">			Triple deletionTriple = deletionDifference.getTriple();</span>
+					
+<span class="nc" id="L247">			String subject = additionTriple.getSubject();</span>
+<span class="nc" id="L248">			String predicate = additionTriple.getPredicate();</span>
+<span class="nc" id="L249">			String altObject = deletionTriple.getObject();</span>
+<span class="nc" id="L250">			String newObject = additionTriple.getObject();</span>
+			
+			//get checkBox state
+			//get approved button state
+<span class="nc" id="L254">			String isRenaming = &quot;no&quot;;</span>
+<span class="nc" id="L255">			String isResolved = &quot;no&quot;;</span>
+<span class="nc bnc" id="L256" title="All 4 branches missed.">			if(additionDifference.getResolutionState() == ResolutionStateEnum.RESOLVED</span>
+					&amp;&amp; deletionDifference.getResolutionState() == ResolutionStateEnum.RESOLVED) {
+<span class="nc bnc" id="L258" title="All 4 branches missed.">				if(additionDifference.getTripleResolutionState() == SDDTripleStateEnum.ADDED</span>
+						&amp;&amp; deletionDifference.getTripleResolutionState() == SDDTripleStateEnum.DELETED) {
+<span class="nc" id="L260">					isRenaming = &quot;yes&quot;;</span>
+<span class="nc" id="L261">					isResolved = &quot;yes&quot;;	</span>
+<span class="nc bnc" id="L262" title="All 4 branches missed.">				} else if (additionDifference.getTripleResolutionState() == SDDTripleStateEnum.DELETED </span>
+						&amp;&amp; deletionDifference.getTripleResolutionState() == SDDTripleStateEnum.ADDED) {
+<span class="nc" id="L264">					isRenaming = &quot;no&quot;;</span>
+<span class="nc" id="L265">					isResolved = &quot;yes&quot;;</span>
+				}
+<span class="nc bnc" id="L267" title="All 4 branches missed.">			}else if(additionDifference.getTripleResolutionState() == SDDTripleStateEnum.ADDED</span>
+					&amp;&amp; deletionDifference.getTripleResolutionState() == SDDTripleStateEnum.DELETED ){
+<span class="nc" id="L269">				isRenaming = &quot;yes&quot;;</span>
+			}
+			
+<span class="nc" id="L272">			highLevelChangeTableModel.readTableRow(new HighLevelChangeTableRow(hlcr, subject, predicate, altObject, newObject, isResolved, isRenaming));</span>
+<span class="nc" id="L273">		}</span>
+<span class="nc" id="L274">		return highLevelChangeTableModel;</span>
+	}
+
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

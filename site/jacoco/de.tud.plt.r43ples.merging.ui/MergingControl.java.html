@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MergingControl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.merging.ui</a> &gt; <span class="el_source">MergingControl.java</span></div><h1>MergingControl.java</h1><pre class="source lang-java linenums">package de.tud.plt.r43ples.merging.ui;
+
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.log4j.Logger;
+
+import com.github.mustachejava.DefaultMustacheFactory;
+import com.github.mustachejava.Mustache;
+import com.github.mustachejava.MustacheFactory;
+import com.hp.hpl.jena.query.QueryExecution;
+import com.hp.hpl.jena.query.QueryExecutionFactory;
+import com.hp.hpl.jena.query.QuerySolution;
+import com.hp.hpl.jena.query.ResultSet;
+import com.hp.hpl.jena.query.ResultSetFactory;
+import com.hp.hpl.jena.rdf.model.Model;
+
+import de.tud.plt.r43ples.exception.InternalErrorException;
+import de.tud.plt.r43ples.management.Config;
+import de.tud.plt.r43ples.management.Interface;
+import de.tud.plt.r43ples.management.JenaModelManagement;
+import de.tud.plt.r43ples.management.R43plesRequest;
+import de.tud.plt.r43ples.merging.MergeResult;
+import de.tud.plt.r43ples.merging.TripleObjectTypeEnum;
+import de.tud.plt.r43ples.merging.management.ProcessManagement;
+import de.tud.plt.r43ples.merging.model.structure.DifferenceModel;
+import de.tud.plt.r43ples.merging.model.structure.HighLevelChangeModel;
+import de.tud.plt.r43ples.merging.model.structure.HighLevelChangeTableModel;
+import de.tud.plt.r43ples.merging.model.structure.Individual;
+import de.tud.plt.r43ples.merging.model.structure.MergeCommitModel;
+import de.tud.plt.r43ples.merging.model.structure.Triple;
+
+
+<span class="nc" id="L37">public class MergingControl {</span>
+<span class="nc" id="L38">	private static Logger logger = Logger.getLogger(MergingControl.class);</span>
+	
+<span class="nc" id="L40">	private DifferenceModel differenceModel = new DifferenceModel();</span>
+	
+<span class="nc" id="L42">	private HighLevelChangeModel highLevelChangeModel = new HighLevelChangeModel();</span>
+<span class="nc" id="L43">	private HighLevelChangeTableModel highLevelChangeTableModel = new HighLevelChangeTableModel();</span>
+	
+	/** Merge Query Model. **/
+	private MergeCommitModel commitModel;
+	private String conflictModel;
+	private List&lt;Individual&gt; individualList;
+
+	private String commonRevision;
+	
+		
+	
+	/**show triple merging view*/
+	public String getViewHtmlOutput() {	
+<span class="nc" id="L56">		Map&lt;String, Object&gt; scope = new HashMap&lt;String, Object&gt;();</span>
+<span class="nc" id="L57">		StringWriter sw = new StringWriter();</span>
+<span class="nc" id="L58">	    MustacheFactory mf = new DefaultMustacheFactory();</span>
+<span class="nc" id="L59">	    Mustache mustache = mf.compile(&quot;templates/merge_process.mustache&quot;);</span>
+<span class="nc" id="L60">	    scope.put(&quot;merging_active&quot;, true);</span>
+<span class="nc" id="L61">	    scope.put(&quot;commitModel&quot;, commitModel);	</span>
+<span class="nc" id="L62">		scope.put(&quot;tripleDifferenceModel&quot;, differenceModel);</span>
+<span class="nc" id="L63">		scope.put(&quot;individualList&quot;, individualList);</span>
+<span class="nc" id="L64">		scope.put(&quot;highLevelRowList&quot;, highLevelChangeTableModel.getTripleRowList());</span>
+		
+<span class="nc" id="L66">		scope.put(&quot;commonRevision&quot;, commonRevision);</span>
+		
+<span class="nc" id="L68">		mustache.execute(sw, scope);		</span>
+<span class="nc" id="L69">		return sw.toString();		</span>
+	}
+	
+	
+
+	/**
+	 * 
+	 * @param response
+	 * @param graphName
+	 * @param branchNameA
+	 * @param branchNameB
+	 * @param format
+	 * @throws InternalErrorException
+	 */
+	public void getMergeProcess(MergeCommitModel commitModel, MergeResult mresult) throws InternalErrorException {
+<span class="nc" id="L84">		logger.info(&quot;Merge query produced conflicts.&quot;);</span>
+<span class="nc" id="L85">		this.commitModel = commitModel;</span>
+<span class="nc" id="L86">		this.commonRevision = mresult.commonRevision;</span>
+<span class="nc" id="L87">		this.conflictModel = mresult.conflictModel;</span>
+		
+		
+<span class="nc" id="L90">		Model jenaModel = JenaModelManagement.readStringToJenaModel(conflictModel, &quot;TURTLE&quot;);</span>
+				
+		// create model for triple view
+<span class="nc" id="L93">		differenceModel = ProcessManagement.readDifferenceModel(jenaModel);		</span>
+
+		// Create the individual models of both branches
+<span class="nc" id="L96">		individualList = createIndividualsList(commitModel, jenaModel);</span>
+		
+		// create high level view instances
+		//highLevelChangeModel = ProcessManagement.createHighLevelChangeRenamingModel(differenceModel);
+<span class="nc" id="L100">		highLevelChangeTableModel = ProcessManagement.createHighLevelChangeTableModel(highLevelChangeModel);</span>
+<span class="nc" id="L101">	}</span>
+	
+		
+	
+	/**
+	 * ##########################################################################################################################################################################
+	 * ##########################################################################################################################################################################
+	 * ##                                                                                                                                                                      ##
+	 * ## Semantic enrichment - individuals.                                                                                                                                   ##
+	 * ##                                                                                                                                                                      ##
+	 * ##########################################################################################################################################################################
+	 * ##########################################################################################################################################################################
+	 */
+	
+	
+	/**
+	 * Create the semantic enrichment List of all individuals.
+	 * @throws InternalErrorException 
+	 */
+	public List&lt;Individual&gt; createIndividualsList(MergeCommitModel commitModel, Model jenaModel) throws InternalErrorException {
+<span class="nc" id="L121">		List&lt;Individual&gt; individualList = new ArrayList&lt;Individual&gt;();	</span>
+
+		
+		// Get all subjects from difference model
+<span class="nc" id="L125">		String querySubject = Config.prefixes +</span>
+				  &quot;SELECT DISTINCT ?subject &quot;
+				+ &quot;WHERE { &quot;
+				+ &quot; ?triple rdf:subject ?subject.&quot;
+				+ &quot;}&quot;;
+<span class="nc" id="L130">		QueryExecution qeSubject = QueryExecutionFactory.create(querySubject, jenaModel);</span>
+<span class="nc" id="L131">		ResultSet resultSetSubject = qeSubject.execSelect();</span>
+<span class="nc bnc" id="L132" title="All 2 branches missed.">		while(resultSetSubject.hasNext()) {</span>
+<span class="nc" id="L133">	    	QuerySolution qsSubject = resultSetSubject.next();</span>
+<span class="nc" id="L134">	    	String individualUri = qsSubject.getResource(&quot;?subject&quot;).toString();</span>
+<span class="nc" id="L135">	    	Individual individual = new Individual();</span>
+<span class="nc" id="L136">			individual.resourceUri = individualUri;</span>
+<span class="nc" id="L137">	    	individual.triplesBranchA = addTriplesOfIndividual(individualUri, commitModel.getBranch1());</span>
+<span class="nc" id="L138">	    	individual.triplesBranchB = addTriplesOfIndividual(individualUri, commitModel.getBranch2());</span>
+<span class="nc" id="L139">	    	individualList.add(individual);</span>
+<span class="nc" id="L140">		}	</span>
+<span class="nc" id="L141">		return individualList;</span>
+	}
+	
+	private HashMap&lt;Triple, Boolean&gt; addTriplesOfIndividual(String individualUri, String branchName) throws InternalErrorException{
+<span class="nc" id="L145">		HashMap&lt;Triple, Boolean&gt; triples = new HashMap&lt;Triple, Boolean&gt;();</span>
+<span class="nc" id="L146">		String query = Config.prefixes + String.format(</span>
+				  &quot;SELECT ?predicate ?object %n&quot;
+				+ &quot;FROM &lt;%s&gt; REVISION \&quot;%s\&quot; %n&quot;
+				+ &quot;WHERE { %n&quot;
+				+ &quot;	&lt;%s&gt; ?predicate ?object . %n&quot;
+				+ &quot;}&quot;
+				+ &quot;ORDER BY ?predicate ?object&quot;, commitModel.getGraphName(), branchName, individualUri);
+		
+<span class="nc" id="L154">		R43plesRequest request = new R43plesRequest(query, &quot;text/xml&quot;);</span>
+		
+<span class="nc" id="L156">		String resultBranch1 = Interface.sparqlSelectConstructAsk(request, false);</span>
+<span class="nc" id="L157">		ResultSet resultSetBranch1 = ResultSetFactory.fromXML(resultBranch1);</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">		while(resultSetBranch1.hasNext()) {</span>
+<span class="nc" id="L159">	    	QuerySolution qsBranch1 = resultSetBranch1.next();</span>
+<span class="nc" id="L160">	    	String predicate = qsBranch1.getResource(&quot;?predicate&quot;).toString();</span>
+	    	String object;
+<span class="nc" id="L162">			TripleObjectTypeEnum objectType = null;</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">			if (qsBranch1.get(&quot;?object&quot;).isLiteral()) {</span>
+<span class="nc" id="L164">				object = qsBranch1.getLiteral(&quot;?object&quot;).toString();</span>
+<span class="nc" id="L165">				objectType = TripleObjectTypeEnum.LITERAL;</span>
+			} else {
+<span class="nc" id="L167">				object = qsBranch1.getResource(&quot;?object&quot;).toString();</span>
+<span class="nc" id="L168">				objectType = TripleObjectTypeEnum.RESOURCE;</span>
+			}
+	    	// Create the triple
+<span class="nc" id="L171">			Triple triple = new Triple(individualUri, predicate, object, objectType);</span>
+			// Check if there is a corresponding difference
+<span class="nc" id="L173">			boolean isConflict = ProcessManagement.isConflicting(triple, differenceModel);</span>
+	    	
+<span class="nc" id="L175">	    	triples.put(triple, isConflict);</span>
+<span class="nc" id="L176">		}</span>
+<span class="nc" id="L177">		return triples;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

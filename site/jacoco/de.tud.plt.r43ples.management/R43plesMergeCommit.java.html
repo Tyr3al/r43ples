@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>R43plesMergeCommit.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.management</a> &gt; <span class="el_source">R43plesMergeCommit.java</span></div><h1>R43plesMergeCommit.java</h1><pre class="source lang-java linenums">package de.tud.plt.r43ples.management;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.apache.log4j.Logger;
+
+import de.tud.plt.r43ples.exception.InternalErrorException;
+
+public class R43plesMergeCommit extends R43plesCommit {
+	
+	/** default logger for this class */
+<span class="fc" id="L13">	private final static Logger logger = Logger.getLogger(R43plesMergeCommit.class);</span>
+	
+<span class="pc" id="L15">	private final int patternModifier = Pattern.DOTALL + Pattern.MULTILINE + Pattern.CASE_INSENSITIVE;</span>
+<span class="pc" id="L16">	private final Pattern patternMergeQuery = Pattern.compile(</span>
+			&quot;(?&lt;action&gt;MERGE|REBASE|MERGE FF)\\s*(?&lt;type&gt;AUTO|MANUAL)?\\s*GRAPH\\s*&lt;(?&lt;graph&gt;[^&gt;]*?)&gt;\\s*(SDD\\s*&lt;(?&lt;sdd&gt;[^&gt;]*?)&gt;)?\\s*BRANCH\\s*\&quot;(?&lt;branchNameA&gt;[^\&quot;]*?)\&quot;\\s*INTO\\s*\&quot;(?&lt;branchNameB&gt;[^\&quot;]*?)\&quot;(?&lt;with&gt;\\s*WITH\\s*\\{(?&lt;triples&gt;.*)\\})?&quot;,
+			patternModifier);
+	public final String triples;
+	public final String branchNameA;
+	public final String branchNameB;
+	public final String sdd;
+	public final String graphName;
+	public final String type;
+	public final String action;
+	public final boolean with;
+
+	public R43plesMergeCommit(R43plesRequest request) throws InternalErrorException {
+<span class="fc" id="L29">		super(request);</span>
+<span class="fc" id="L30">		Matcher m = patternMergeQuery.matcher(request.query_sparql);</span>
+<span class="pc bpc" id="L31" title="1 of 2 branches missed.">		if (!m.find())</span>
+<span class="nc" id="L32">			throw new InternalErrorException(&quot;Error in query: &quot; + request.query_sparql);</span>
+		
+<span class="fc" id="L34">		action = m.group(&quot;action&quot;);</span>
+<span class="fc" id="L35">		type = m.group(&quot;type&quot;);</span>
+<span class="fc" id="L36">		graphName = m.group(&quot;graph&quot;);</span>
+<span class="fc" id="L37">		sdd = m.group(&quot;sdd&quot;);</span>
+<span class="fc" id="L38">		branchNameA = m.group(&quot;branchNameA&quot;).toLowerCase();</span>
+<span class="fc" id="L39">		branchNameB = m.group(&quot;branchNameB&quot;).toLowerCase();</span>
+<span class="fc bfc" id="L40" title="All 2 branches covered.">		with = m.group(&quot;with&quot;)!=null;</span>
+<span class="fc" id="L41">		triples = m.group(&quot;triples&quot;);</span>
+		
+<span class="fc" id="L43">		logger.debug(&quot;type: &quot; + type);</span>
+<span class="fc" id="L44">		logger.debug(&quot;graph: &quot; + graphName);</span>
+<span class="fc" id="L45">		logger.debug(&quot;sdd: &quot; + sdd);</span>
+<span class="fc" id="L46">		logger.debug(&quot;branchNameA: &quot; + branchNameA);</span>
+<span class="fc" id="L47">		logger.debug(&quot;branchNameB: &quot; + branchNameB);</span>
+<span class="fc" id="L48">		logger.debug(&quot;with: &quot; + with);</span>
+<span class="fc" id="L49">		logger.debug(&quot;triples: &quot; + triples);</span>
+<span class="fc" id="L50">	}</span>
+	
+	
+	public R43plesMergeCommit(final String graphName,
+			final String branchNameA,
+			final String branchNameB,
+			final String user,
+			final String message,
+			final String format
+			) {
+<span class="nc" id="L60">		super(new R43plesRequest(&quot;&quot;, format));</span>
+<span class="nc" id="L61">		this.graphName = graphName;</span>
+<span class="nc" id="L62">		this.branchNameA = branchNameA;</span>
+<span class="nc" id="L63">		this.branchNameB = branchNameB;</span>
+<span class="nc" id="L64">		this.user = user;</span>
+<span class="nc" id="L65">		this.message = message;</span>
+<span class="nc" id="L66">		this.sdd = null;</span>
+<span class="nc" id="L67">		this.action = null;</span>
+<span class="nc" id="L68">		this.triples = null;</span>
+<span class="nc" id="L69">		this.type = null;</span>
+<span class="nc" id="L70">		this.with = false;</span>
+<span class="nc" id="L71">	}</span>
+
+
+
+	
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

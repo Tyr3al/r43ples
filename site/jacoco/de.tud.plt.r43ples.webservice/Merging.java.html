@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Merging.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.webservice</a> &gt; <span class="el_source">Merging.java</span></div><h1>Merging.java</h1><pre class="source lang-java linenums">package de.tud.plt.r43ples.webservice;
+
+import java.io.StringWriter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.ws.rs.FormParam;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.ResponseBuilder;
+
+import org.apache.log4j.Logger;
+
+import com.github.mustachejava.DefaultMustacheFactory;
+import com.github.mustachejava.Mustache;
+import com.github.mustachejava.MustacheFactory;
+
+import de.tud.plt.r43ples.exception.InternalErrorException;
+import de.tud.plt.r43ples.management.Interface;
+import de.tud.plt.r43ples.management.R43plesMergeCommit;
+import de.tud.plt.r43ples.management.RevisionGraph;
+import de.tud.plt.r43ples.management.RevisionManagement;
+import de.tud.plt.r43ples.merging.FastForwardControl;
+import de.tud.plt.r43ples.merging.MergeResult;
+import de.tud.plt.r43ples.merging.model.structure.MergeCommitModel;
+import de.tud.plt.r43ples.merging.ui.MergingControl;
+
+@Path(&quot;merging&quot;)
+<span class="fc" id="L34">public class Merging {</span>
+	
+<span class="fc" id="L36">	private final static Logger logger = Logger.getLogger(Merging.class);	</span>
+
+	/**
+	 * get merging HTML start page and input merging information
+	 * */
+	@GET
+	public final Response getMerging() {
+<span class="fc" id="L43">		logger.info(&quot;Merging - Start page&quot;);		</span>
+		
+<span class="fc" id="L45">		List&lt;String&gt; graphList = RevisionManagement.getRevisedGraphsList();	</span>
+<span class="fc" id="L46">		Map&lt;String, Object&gt; scope = new HashMap&lt;String, Object&gt;();</span>
+<span class="fc" id="L47">	    scope.put(&quot;merging_active&quot;, true);</span>
+<span class="fc" id="L48">		scope.put(&quot;graphList&quot;, graphList);</span>
+		
+<span class="fc" id="L50">		StringWriter sw = new StringWriter();</span>
+<span class="fc" id="L51">		MustacheFactory mf = new DefaultMustacheFactory();</span>
+<span class="fc" id="L52">		Mustache mustache = mf.compile(&quot;templates/merge_start.mustache&quot;);		</span>
+<span class="fc" id="L53">		mustache.execute(sw, scope);		</span>
+<span class="fc" id="L54">		return Response.ok().entity(sw.toString()).type(MediaType.TEXT_HTML).build();</span>
+	}
+	
+	
+	
+	/**
+	 * Perform a Merge query on html interface
+	 * create RevisionProcess Model A
+	 * create RevisionProcess Model B
+	 * create Difference model 
+	 */
+	@POST
+	@Produces({ MediaType.TEXT_PLAIN, MediaType.TEXT_HTML, MediaType.APPLICATION_JSON, &quot;application/rdf+xml&quot;, &quot;text/turtle&quot;, &quot;application/sparql-results+xml&quot; })
+	public final Response mergingPOST(
+			@FormParam(&quot;graph&quot;) final String graphName,
+			@FormParam(&quot;sdd&quot;) final String sddName,
+			@FormParam(&quot;strategy&quot;) final String strategy,
+			@FormParam(&quot;branch1&quot;) final String branch1,
+			@FormParam(&quot;branch2&quot;) final String branch2,
+			@FormParam(&quot;user&quot;) final String user,
+			@FormParam(&quot;message&quot;) final String message) throws InternalErrorException {
+		
+<span class="nc bnc" id="L76" title="All 2 branches missed.">		if (graphName==null)</span>
+<span class="nc" id="L77">			throw new InternalErrorException(&quot;graph name has to be provided&quot;);</span>
+<span class="nc bnc" id="L78" title="All 4 branches missed.">		if (branch1==null || branch2==null)</span>
+<span class="nc" id="L79">			throw new InternalErrorException(&quot;branch names have to be provided&quot;);</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">		if (user==null)</span>
+<span class="nc" id="L81">			throw new InternalErrorException(&quot;user name has to be provided&quot;);</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">		if (message==null)</span>
+<span class="nc" id="L83">			throw new InternalErrorException(&quot;commit message name has to be provided&quot;);</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">		if (strategy==null)</span>
+<span class="nc" id="L85">			throw new InternalErrorException(&quot;strategy name has to be provided&quot;);</span>
+					
+<span class="nc" id="L87">		ResponseBuilder response = Response.ok();</span>
+<span class="nc" id="L88">		RevisionGraph graph = new RevisionGraph(graphName);</span>
+		
+		// Fast Forward
+<span class="nc bnc" id="L91" title="All 2 branches missed.">		if(strategy.equals(&quot;Fast-Forward&quot;)){</span>
+<span class="nc" id="L92">			MergeCommitModel commitModel = new MergeCommitModel(graphName, sddName, user, message, branch1, branch2, &quot;Fast-Forward&quot;, null);</span>
+			
+<span class="nc" id="L94">			boolean ff_successful = FastForwardControl.performFastForward(graph, branch1, branch2, user, RevisionManagement.getDateString(), message);</span>
+
+<span class="nc bnc" id="L96" title="All 2 branches missed.">			if (ff_successful){</span>
+<span class="nc" id="L97">				response = Response.ok();</span>
+<span class="nc" id="L98">				response.entity(commitModel.getReportView());</span>
+<span class="nc" id="L99">				return response.build();</span>
+			}
+			else {
+<span class="nc" id="L102">				throw new InternalErrorException(&quot;Error during fast forward process&quot;);</span>
+			}
+		}
+		// Rebase
+<span class="nc bnc" id="L106" title="All 2 branches missed.">		else if(strategy.equals(&quot;Rebase&quot;)){</span>
+		
+			//String rebaseQuery = StrategyManagement.createRebaseQuery(graphName, sddName, user, message, branch1, branch2, type, null);
+			
+			
+			//for each client, create a mergingControlMap and for each named graph create a mergingControl, first check, if namedgraph exist .
+			//first create the mergingcontrol and than create the rebasecontrol
+			MergingControl mergingControl;
+<span class="nc bnc" id="L114" title="All 2 branches missed.">			if(!Endpoint.clientMap.containsKey(user)){</span>
+<span class="nc" id="L115">				mergingControl = new MergingControl();</span>
+<span class="nc" id="L116">				Endpoint.clientMap.put(user, new HashMap&lt;String, MergingControl&gt;());</span>
+<span class="nc" id="L117">				Endpoint.clientMap.get(user).put(graphName, mergingControl);</span>
+<span class="nc bnc" id="L118" title="All 4 branches missed.">			}else if(Endpoint.clientMap.containsKey(user) &amp;&amp; (!Endpoint.clientMap.get(user).containsKey(graphName))) {</span>
+<span class="nc" id="L119">				mergingControl = new MergingControl();</span>
+<span class="nc" id="L120">				Endpoint.clientMap.get(user).put(graphName, mergingControl);</span>
+			}else{
+<span class="nc" id="L122">				mergingControl = Endpoint.clientMap.get(user).get(graphName);</span>
+			}
+			
+//			rebaseControl.createCommitModel(graphName, sddName, user, message, branch1, branch2, &quot;Rebase&quot;, type.toString());
+			
+			//Response responsePost = null;
+			//if (Endpoint.patternRebaseQuery.matcher(rebaseQuery).find()) {
+			//	responsePost= ep.getRebaseResponse(rebaseQuery, user, message, &quot;HTML&quot;);
+			//	logger.debug(&quot;rebase response status: &quot;+responsePost.getStatusInfo().toString());	
+			//	logger.debug(&quot;rebase response Header: &quot;+responsePost.getHeaders().get(&quot;merging-strategy-information&quot;).get(0).toString());	
+			//	logger.debug(&quot;rebase response Header: &quot;+responsePost.getHeaders().keySet().toString());	
+			//}
+
+//			String rebaseResultView = rebaseControl.getRebaseReportView(graphName);
+//			response.entity(rebaseResultView);
+<span class="nc" id="L137">			return response.build();		</span>
+		}
+		// Three Way Merge
+		else {			
+<span class="nc" id="L141">			MergeCommitModel commitModel = new MergeCommitModel(graphName, sddName, user, message, branch1, branch2, &quot;Three-Way&quot;, null);</span>
+<span class="nc" id="L142">			R43plesMergeCommit commit = new R43plesMergeCommit(graphName, branch1, branch2, user, message, &quot;text/turtle&quot;);</span>
+<span class="nc" id="L143">			MergeResult mresult = Interface.mergeThreeWay(commit);</span>
+							
+<span class="nc bnc" id="L145" title="All 2 branches missed.">			if(!mresult.hasConflict){</span>
+<span class="nc" id="L146">				response.entity(commitModel.getReportView());				</span>
+<span class="nc" id="L147">				return response.build();</span>
+			} else {
+<span class="nc" id="L149">				MergingControl mergingControl = new MergingControl();</span>
+				// show page for resolving conflicts
+<span class="nc" id="L151">				mergingControl.getMergeProcess(commitModel, mresult);</span>
+<span class="nc" id="L152">				response.entity(mergingControl.getViewHtmlOutput());</span>
+<span class="nc" id="L153">				return response.build();</span>
+			}
+		}	
+	}			
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

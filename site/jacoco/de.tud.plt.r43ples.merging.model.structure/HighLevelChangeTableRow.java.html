@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HighLevelChangeTableRow.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.merging.model.structure</a> &gt; <span class="el_source">HighLevelChangeTableRow.java</span></div><h1>HighLevelChangeTableRow.java</h1><pre class="source lang-java linenums">package de.tud.plt.r43ples.merging.model.structure;
+
+
+/**store the information of difference model as high level table
+ * 
+ * @author Xinyu Yang
+ * 
+ * */
+
+public class HighLevelChangeTableRow {
+<span class="nc" id="L11">	String tripleId = null;</span>
+	HighLevelChangeRenaming  highLevelChangeRenaming;
+	String subject;
+	String predicate;
+	String objectAlt;
+	String objectNew;
+	String isResolved;
+	String isRenaming;
+		
+	
+	public HighLevelChangeTableRow(HighLevelChangeRenaming highLevelChangeRenaming, String subject,
+<span class="nc" id="L22">			String predicate, String objectAlt, String objectNew, String isResolved, String isRenaming) {</span>
+<span class="nc" id="L23">		this.highLevelChangeRenaming = highLevelChangeRenaming;</span>
+<span class="nc" id="L24">		this.subject = subject;</span>
+<span class="nc" id="L25">		this.predicate = predicate;</span>
+<span class="nc" id="L26">		this.objectAlt = objectAlt;</span>
+<span class="nc" id="L27">		this.objectNew = objectNew;</span>
+<span class="nc" id="L28">		this.isResolved = isResolved;</span>
+<span class="nc" id="L29">		this.isRenaming = isRenaming;</span>
+<span class="nc" id="L30">	}</span>
+
+
+	public String getTripleId() {
+<span class="nc" id="L34">		return tripleId;</span>
+	}
+
+
+	public void setTripleId(String tripleId) {
+<span class="nc" id="L39">		this.tripleId = tripleId;</span>
+<span class="nc" id="L40">	}</span>
+
+
+	public HighLevelChangeRenaming getHighLevelChangeRenaming() {
+<span class="nc" id="L44">		return highLevelChangeRenaming;</span>
+	}
+
+
+	public void setHighLevelChangeRenaming(
+			HighLevelChangeRenaming highLevelChangeRenaming) {
+<span class="nc" id="L50">		this.highLevelChangeRenaming = highLevelChangeRenaming;</span>
+<span class="nc" id="L51">	}</span>
+
+
+	public String getSubject() {
+<span class="nc" id="L55">		return subject;</span>
+	}
+
+
+	public void setSubject(String subject) {
+<span class="nc" id="L60">		this.subject = subject;</span>
+<span class="nc" id="L61">	}</span>
+
+
+	public String getPredicate() {
+<span class="nc" id="L65">		return predicate;</span>
+	}
+
+
+	public void setPredicate(String predicate) {
+<span class="nc" id="L70">		this.predicate = predicate;</span>
+<span class="nc" id="L71">	}</span>
+
+
+	public String getObjectAlt() {
+<span class="nc" id="L75">		return objectAlt;</span>
+	}
+
+
+	public void setObjectAlt(String objectAlt) {
+<span class="nc" id="L80">		this.objectAlt = objectAlt;</span>
+<span class="nc" id="L81">	}</span>
+
+
+	public String getObjectNew() {
+<span class="nc" id="L85">		return objectNew;</span>
+	}
+
+
+	public void setObjectNew(String objectNew) {
+<span class="nc" id="L90">		this.objectNew = objectNew;</span>
+<span class="nc" id="L91">	}</span>
+
+
+	public String getIsResolved() {
+<span class="nc" id="L95">		return isResolved;</span>
+	}
+
+
+	public void setIsResolved(String isResolved) {
+<span class="nc" id="L100">		this.isResolved = isResolved;</span>
+<span class="nc" id="L101">	}</span>
+
+
+	public String getIsRenaming() {
+<span class="nc" id="L105">		return isRenaming;</span>
+	}
+
+
+	public void setIsRenaming(String isRenaming) {
+<span class="nc" id="L110">		this.isRenaming = isRenaming;</span>
+<span class="nc" id="L111">	}</span>
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

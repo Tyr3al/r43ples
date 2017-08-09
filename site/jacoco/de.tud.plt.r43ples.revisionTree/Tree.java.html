@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Tree.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.revisionTree</a> &gt; <span class="el_source">Tree.java</span></div><h1>Tree.java</h1><pre class="source lang-java linenums">package de.tud.plt.r43ples.revisionTree;
+
+import java.util.HashMap;
+import java.util.LinkedList;
+
+import org.apache.log4j.Logger;
+
+import com.hp.hpl.jena.query.QuerySolution;
+import com.hp.hpl.jena.query.ResultSet;
+
+import de.tud.plt.r43ples.management.Config;
+import de.tud.plt.r43ples.triplestoreInterface.TripleStoreInterfaceSingleton;
+
+/**
+ * This class provides a tree structure to store revision structure.
+ * Uses the {@link Revision revision} class.
+ * 
+ * @author Stephan Hensel
+ *
+ */
+public class Tree {
+	
+	/** The logger. **/
+<span class="fc" id="L24">	private static Logger logger = Logger.getLogger(Tree.class);</span>
+
+	/** The map to store tree data */
+<span class="fc" id="L27">	private HashMap&lt;String, Revision&gt; map = new HashMap&lt;String, Revision&gt;();</span>
+	
+	
+	
+	/**
+	 * Creates a tree with all revisions (with predecessors and successors and
+	 * references of tags and branches)
+	 * 
+	 * @param revisionGraph
+	 *            the graph name
+	 */
+<span class="fc" id="L38">	public Tree (final String revisionGraph) {</span>
+<span class="fc" id="L39">		logger.debug(&quot;Start creation of revision tree of graph &quot; + revisionGraph + &quot;!&quot;);</span>
+
+		// create query
+<span class="fc" id="L42">		String queryRevisions = Config.prefixes + String.format(&quot;&quot;</span>
+						+ &quot;SELECT ?uri ?revNumber ?fullGraph &quot; 
+						+ &quot;WHERE {&quot;
+						+ &quot;GRAPH &lt;%s&gt; {&quot;
+						+ &quot;	?uri a rmo:Revision;&quot; 
+						+ &quot;		rmo:revisionNumber ?revNumber.&quot;
+						+ &quot;	OPTIONAL { ?branch rmo:references ?uri; rmo:fullGraph ?fullGraph.}&quot; 
+						+ &quot;} }&quot;,
+						revisionGraph);
+<span class="fc" id="L51">		ResultSet resultsCommits = TripleStoreInterfaceSingleton.get().executeSelectQuery(queryRevisions);</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">		while (resultsCommits.hasNext()) {</span>
+<span class="fc" id="L53">			QuerySolution qsCommits = resultsCommits.next();</span>
+<span class="fc" id="L54">			String revision = qsCommits.getResource(&quot;?uri&quot;).toString();</span>
+<span class="fc" id="L55">			String revisionNumber = qsCommits.getLiteral(&quot;?revNumber&quot;).getString();</span>
+<span class="fc" id="L56">			String fullGraph = &quot;&quot;;</span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">			if (qsCommits.getResource(&quot;?fullGraph&quot;) != null)</span>
+<span class="fc" id="L58">				fullGraph = qsCommits.getResource(&quot;?fullGraph&quot;).toString();</span>
+
+<span class="fc" id="L60">			logger.debug(&quot;Found revision: &quot; + revision + &quot;.&quot;);</span>
+<span class="fc" id="L61">			this.addNode(revisionNumber, revision, fullGraph);</span>
+<span class="fc" id="L62">		}</span>
+
+<span class="fc" id="L64">		String queryRevisionConnection = Config.prefixes + String.format(&quot;&quot;</span>
+						+ &quot;SELECT ?revNumber ?preRevNumber &quot;  
+						+ &quot;WHERE { GRAPH &lt;%s&gt; {&quot;
+						+ &quot; ?rev a rmo:Revision;&quot; 
+						+ &quot;	rmo:revisionNumber ?revNumber; &quot; 
+						+ &quot;	prov:wasDerivedFrom ?preRev. &quot;
+						+ &quot;?preRev rmo:revisionNumber ?preRevNumber. &quot; 
+						+ &quot; } }&quot;, revisionGraph);
+<span class="fc" id="L72">		ResultSet resultRevConnection = TripleStoreInterfaceSingleton.get().executeSelectQuery(queryRevisionConnection);</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">		while (resultRevConnection.hasNext()) {</span>
+<span class="fc" id="L74">			QuerySolution qsCommits = resultRevConnection.next();</span>
+<span class="fc" id="L75">			String revision = qsCommits.getLiteral(&quot;?revNumber&quot;).toString();</span>
+<span class="fc" id="L76">			String preRevision = qsCommits.getLiteral(&quot;?preRevNumber&quot;).toString();</span>
+<span class="fc" id="L77">			this.addEdge(revision, preRevision);</span>
+<span class="fc" id="L78">		}</span>
+<span class="fc" id="L79">	}</span>
+	
+	/**
+	 * Add new node to tree.
+	 * 
+	 * @param revisionNumber 
+	 * 			revision number
+	 * @param revisionUri 
+	 * 			URI which specifies this revision
+	 * @param fullGraph
+	 * 			URI of the graph which holds a full copy if available
+	 */
+	private void addNode(String revisionNumber, String revisionUri, String fullGraph) {
+<span class="fc" id="L92">		Revision node = new Revision(revisionNumber, revisionUri, fullGraph);</span>
+<span class="fc" id="L93">		map.put(revisionNumber, node);</span>
+<span class="fc" id="L94">	}</span>
+	
+	/**
+	 * Add edge between to nodes.
+	 * 
+	 * @param successor revision number of the successor node
+	 * @param predecessor revision number of the predecessor node
+	 */
+	private void addEdge(String successor, String predecessor) {
+<span class="fc" id="L103">		Revision nodeS = map.get(successor);</span>
+<span class="fc" id="L104">		Revision nodeP = map.get(predecessor);</span>
+<span class="fc" id="L105">		nodeP.addSuccessor(nodeS);</span>
+<span class="fc" id="L106">	}	</span>
+	
+	/**
+	 * Calculate the path from specified revision to a referenced revision.
+	 * 
+	 * @param revisionNumber the revision number to calculate the path for
+	 * @return linked list with all revisions from specified revision number to referenced revision 
+	 */
+	public LinkedList&lt;Revision&gt; getPathToRevision(String revisionNumber) {
+		// TODO: make path resolving more clever; not always using first successor but breadth-first search
+<span class="fc" id="L116">		LinkedList&lt;Revision&gt; list = new LinkedList&lt;Revision&gt;();</span>
+<span class="fc" id="L117">		Revision node = map.get(revisionNumber);</span>
+		
+		// Add all revision numbers from specified revision to first found revision with a full graph
+<span class="fc" id="L120">		list.addFirst(node);</span>
+<span class="fc bfc" id="L121" title="All 2 branches covered.">		while (node.getFullGraph().equals(&quot;&quot;)) {</span>
+<span class="fc" id="L122">			node = node.getFirstSuccessor();</span>
+<span class="fc" id="L123">			list.addFirst(node);</span>
+		}
+<span class="fc" id="L125">		return list;</span>
+	}	
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

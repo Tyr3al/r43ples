@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Config.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.management</a> &gt; <span class="el_source">Config.java</span></div><h1>Config.java</h1><pre class="source lang-java linenums">package de.tud.plt.r43ples.management;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Set;
+
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.log4j.Logger;
+
+/**
+* General configuration handling.
+* Stores all important configuration from R43ples.
+* Can read from configuration file.
+*
+* @author Markus Graube
+* @author Stephan Hensel
+*
+*/
+<span class="nc" id="L20">public class Config {</span>
+
+	// Database settings
+	
+	// tdb, virtuoso, http_virtuoso, http
+	public static String triplestore_type;
+	public static String triplestore_url;
+	public static String triplestore_user;
+	public static String triplestore_password;
+	
+	
+	// Service settings
+	/** The service host. **/
+	public static String service_host;
+	/** The service port. **/
+	public static int service_port;
+	/** The service path. **/
+	public static String service_path;
+
+	// SSL settings
+	/** The SSL keystore path. **/
+	public static String ssl_keystore;
+	/** The SSL keystore password. **/
+	public static String ssl_password;
+	
+	// Internal r43ples settings
+	/** The r43ples revision graph **/
+	public static String revision_graph;
+	/** The SDD graph URI. **/
+	public static String sdd_graph;
+	/** The path to the SDD graph default content. **/
+	public static String sdd_graph_defaultContent;
+	
+	
+<span class="fc" id="L54">	public static HashMap&lt;String, String&gt; user_defined_prefixes = new HashMap&lt;String, String&gt;();</span>
+	
+	
+	/** The logger. **/
+<span class="fc" id="L58">	private static Logger logger = Logger.getLogger(Config.class);	</span>
+	
+	
+	/**
+	* Read the configuration information from local file.
+	*
+	* @param configFilePath path to configuration file
+	* @throws ConfigurationException
+	*/
+	public static void readConfig(final String configFilePath) throws ConfigurationException{
+		PropertiesConfiguration config;
+		try {
+<span class="fc" id="L70">			config = new PropertiesConfiguration(configFilePath);</span>
+			
+<span class="fc" id="L72">			triplestore_type = config.getString(&quot;triplestore.type&quot;);</span>
+<span class="fc" id="L73">			triplestore_url = config.getString(&quot;triplestore.url&quot;);</span>
+<span class="fc" id="L74">			triplestore_user = config.getString(&quot;triplestore.user&quot;);</span>
+<span class="fc" id="L75">			triplestore_password = config.getString(&quot;triplestore.password&quot;);</span>
+			
+<span class="fc" id="L77">			service_host = config.getString(&quot;service.host&quot;);</span>
+<span class="fc" id="L78">			service_port = config.getInt(&quot;service.port&quot;);</span>
+<span class="fc" id="L79">			service_path = config.getString(&quot;service.path&quot;);</span>
+			
+<span class="fc" id="L81">			ssl_keystore = config.getString(&quot;ssl.keystore&quot;);</span>
+<span class="fc" id="L82">			ssl_password = config.getString(&quot;ssl.password&quot;);</span>
+			
+<span class="fc" id="L84">			revision_graph = config.getString(&quot;revision.graph&quot;);</span>
+			
+<span class="fc" id="L86">			sdd_graph = config.getString(&quot;sdd.graph&quot;);</span>
+<span class="fc" id="L87">			sdd_graph_defaultContent = config.getString(&quot;sdd.graph.defaultContent&quot;);</span>
+			
+<span class="fc" id="L89">			Iterator&lt;String&gt; it = config.getKeys(&quot;prefix&quot;);</span>
+<span class="fc bfc" id="L90" title="All 2 branches covered.">			while ( it.hasNext()) {</span>
+<span class="fc" id="L91">				String prefix = it.next();</span>
+<span class="fc" id="L92">				String namespace = config.getString(prefix);</span>
+<span class="fc" id="L93">				prefix = prefix.replace(&quot;prefix.&quot;, &quot;&quot;);</span>
+<span class="fc" id="L94">				user_defined_prefixes.put(prefix, namespace);</span>
+<span class="fc" id="L95">			}</span>
+
+<span class="fc" id="L97">		} catch (ConfigurationException e) {</span>
+<span class="fc" id="L98">			logger.warn(&quot;Could not read configuration file '&quot; + configFilePath + &quot;'. Switch to 'r43ples.dist.conf'.&quot;);</span>
+<span class="fc" id="L99">			readConfig(&quot;r43ples.dist.conf&quot;);</span>
+<span class="fc" id="L100">		}</span>
+<span class="fc" id="L101">	}</span>
+	
+	public static String getUserDefinedSparqlPrefixes(){
+<span class="fc" id="L104">		StringBuilder sb = new StringBuilder();</span>
+<span class="fc" id="L105">		Set&lt;String&gt; set = user_defined_prefixes.keySet();</span>
+<span class="fc" id="L106">		Iterator&lt;String&gt; it = set.iterator();</span>
+<span class="fc bfc" id="L107" title="All 2 branches covered.">		while (it.hasNext()){</span>
+<span class="fc" id="L108">			String prefix = it.next();</span>
+<span class="fc" id="L109">			String namespace = user_defined_prefixes.get(prefix);</span>
+<span class="fc" id="L110">			sb.append(&quot;PREFIX &quot;+prefix+&quot;: &lt;&quot;+namespace+&quot;&gt; \n&quot;);</span>
+<span class="fc" id="L111">		}</span>
+<span class="fc" id="L112">		return sb.toString();</span>
+	}
+
+	/** The SPARQL prefixes
+	 * **/
+	public static final String prefixes = 
+			  &quot;PREFIX rmo:	&lt;http://eatld.et.tu-dresden.de/rmo#&gt; \n&quot;
+			+ &quot;PREFIX prov: &lt;http://www.w3.org/ns/prov#&gt; \n&quot;
+			+ &quot;PREFIX dc-terms:	&lt;http://purl.org/dc/terms/&gt; \n&quot; 
+			+ &quot;PREFIX xsd:	&lt;http://www.w3.org/2001/XMLSchema#&gt; \n&quot;
+			+ &quot;PREFIX sddo: &lt;http://eatld.et.tu-dresden.de/sddo#&gt; \n&quot;
+			+ &quot;PREFIX sdd:	&lt;http://eatld.et.tu-dresden.de/sdd#&gt; \n&quot;
+			+ &quot;PREFIX rpo: &lt;http://eatld.et.tu-dresden.de/rpo#&gt; \n&quot;
+			+ &quot;PREFIX rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; \n&quot;
+			+ &quot;PREFIX rdf:	&lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt;  \n&quot;
+			+ &quot;PREFIX owl:	&lt;http://www.w3.org/2002/07/owl#&gt; \n&quot;;
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

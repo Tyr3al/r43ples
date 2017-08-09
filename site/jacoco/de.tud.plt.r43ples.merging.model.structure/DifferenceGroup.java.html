@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DifferenceGroup.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.merging.model.structure</a> &gt; <span class="el_source">DifferenceGroup.java</span></div><h1>DifferenceGroup.java</h1><pre class="source lang-java linenums">package de.tud.plt.r43ples.merging.model.structure;
+
+import java.util.HashMap;
+
+import de.tud.plt.r43ples.merging.SDDTripleStateEnum;
+
+
+/**
+ * Stores all information of a difference group.
+ * 
+ * @author Stephan Hensel
+ *
+ */
+public class DifferenceGroup {
+
+	/** The triple state in A. **/
+	private SDDTripleStateEnum tripleStateA;
+	/** The triple state in B. **/
+	private SDDTripleStateEnum tripleStateB;
+	/** The automatic resolution state. **/
+	private SDDTripleStateEnum automaticResolutionState;
+	/** The conflicting property. Specifies if this difference is a conflict or not. **/
+	private boolean conflicting;
+	/** The array list which contains all differences. **/
+	private HashMap&lt;Triple, Difference&gt; differences;
+	
+	
+	/**
+	 * The constructor.
+	 * 
+	 * @param tripleStateA the triple state in A
+	 * @param tripleStateB the triple state in B
+	 * @param automaticResolutionState the automatic resolution state
+	 * @param conflicting is conflicting
+	 */
+<span class="nc" id="L36">	public DifferenceGroup(SDDTripleStateEnum tripleStateA, SDDTripleStateEnum tripleStateB, SDDTripleStateEnum automaticResolutionState, boolean conflicting) {</span>
+<span class="nc" id="L37">		this.tripleStateA = tripleStateA;</span>
+<span class="nc" id="L38">		this.tripleStateB = tripleStateB;</span>
+<span class="nc" id="L39">		this.automaticResolutionState = automaticResolutionState;</span>
+<span class="nc" id="L40">		this.conflicting = conflicting;</span>
+<span class="nc" id="L41">		setDifferences(new HashMap&lt;Triple, Difference&gt;());</span>
+<span class="nc" id="L42">	}</span>
+
+	
+	/**
+	 * Get the triple state in A.
+	 * 
+	 * @return the triple state
+	 */
+	public SDDTripleStateEnum getTripleStateA() {
+<span class="nc" id="L51">		return tripleStateA;</span>
+	}
+
+	
+	/**
+	 * Set the triple state of A.
+	 * 
+	 * @param tripleStateA the triple state in A
+	 */
+	public void setTripleStateA(SDDTripleStateEnum tripleStateA) {
+<span class="nc" id="L61">		this.tripleStateA = tripleStateA;</span>
+<span class="nc" id="L62">	}</span>
+
+
+	/**
+	 * Get the triple state in B.
+	 * 
+	 * @return the triple state
+	 */
+	public SDDTripleStateEnum getTripleStateB() {
+<span class="nc" id="L71">		return tripleStateB;</span>
+	}
+
+
+	/**
+	 * Set the triple state of B.
+	 * 
+	 * @param tripleStateB the triple state in B
+	 */
+	public void setTripleStateB(SDDTripleStateEnum tripleStateB) {
+<span class="nc" id="L81">		this.tripleStateB = tripleStateB;</span>
+<span class="nc" id="L82">	}</span>
+
+
+	/**
+	 * Get the automatic resolution state.
+	 * 
+	 * @return the automatic resolution state
+	 */
+	public SDDTripleStateEnum getAutomaticResolutionState() {
+<span class="nc" id="L91">		return automaticResolutionState;</span>
+	}
+
+
+	/**
+	 * Set the automatic resolution state.
+	 * 
+	 * @param automaticResolutionState the automatic resolution state
+	 */
+	public void setAutomaticResolutionState(SDDTripleStateEnum automaticResolutionState) {
+<span class="nc" id="L101">		this.automaticResolutionState = automaticResolutionState;</span>
+<span class="nc" id="L102">	}</span>
+
+
+	/**
+	 * Is this difference group a conflicting group.
+	 * 
+	 * @return the is conflicting property
+	 */
+	public boolean isConflicting() {
+<span class="nc" id="L111">		return conflicting;</span>
+	}
+
+
+	/**
+	 * Set the conflicting property
+	 * 
+	 * @param conflicting the conflicting property
+	 */
+	public void setConflicting(boolean conflicting) {
+<span class="nc" id="L121">		this.conflicting = conflicting;</span>
+<span class="nc" id="L122">	}</span>
+	
+
+	/**
+	 * Get the differences.
+	 * 
+	 * @return the hash map with all differences
+	 */
+	public HashMap&lt;Triple, Difference&gt; getDifferences() {
+<span class="nc" id="L131">		return differences;</span>
+	}
+
+
+	/**
+	 * Set the differences.
+	 * 
+	 * @param differences the differences to set
+	 */
+	public void setDifferences(HashMap&lt;Triple, Difference&gt; differences) {
+<span class="nc" id="L141">		this.differences = differences;</span>
+<span class="nc" id="L142">	}</span>
+	
+	
+	/**
+	 * Add a difference. If the difference identifier already exists the old difference will be overwritten.
+	 * 
+	 * @param identifier the identifier
+	 * @param difference the difference
+	 */
+	public void addDifference(Triple identifier, Difference difference) {
+<span class="nc" id="L152">		this.differences.put(identifier, difference);</span>
+<span class="nc" id="L153">	}</span>
+	
+	
+	/**
+	 * Remove entry from difference.
+	 * 
+	 * @param identifier the identifier of the difference to remove
+	 */
+	public void removeDifference(String identifier) {
+<span class="nc" id="L162">		this.differences.remove(identifier);</span>
+<span class="nc" id="L163">	}</span>
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

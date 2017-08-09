@@ -1,0 +1,1076 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MergeManagement.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.merging</a> &gt; <span class="el_source">MergeManagement.java</span></div><h1>MergeManagement.java</h1><pre class="source lang-java linenums">package de.tud.plt.r43ples.merging;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+
+import org.apache.log4j.Logger;
+
+import com.hp.hpl.jena.query.Query;
+import com.hp.hpl.jena.query.QueryExecution;
+import com.hp.hpl.jena.query.QueryExecutionFactory;
+import com.hp.hpl.jena.query.QueryFactory;
+import com.hp.hpl.jena.query.QuerySolution;
+import com.hp.hpl.jena.query.ResultSet;
+import com.hp.hpl.jena.rdf.model.Model;
+import com.hp.hpl.jena.util.FileUtils;
+
+import de.tud.plt.r43ples.exception.InternalErrorException;
+import de.tud.plt.r43ples.management.Config;
+import de.tud.plt.r43ples.management.JenaModelManagement;
+import de.tud.plt.r43ples.management.R43plesMergeCommit;
+import de.tud.plt.r43ples.management.RevisionGraph;
+import de.tud.plt.r43ples.management.RevisionManagement;
+import de.tud.plt.r43ples.triplestoreInterface.TripleStoreInterfaceSingleton;
+
+/**
+ * This class provides methods for merging branches.
+ * 
+ * @author Stephan Hensel
+ *
+ */
+<span class="nc" id="L33">public class MergeManagement {</span>
+
+	/** The logger. */
+<span class="fc" id="L36">	private static Logger logger = Logger.getLogger(MergeManagement.class);</span>
+	/** The SPARQL prefixes. **/
+	private final static String prefix_rmo = &quot;PREFIX rmo: &lt;http://eatld.et.tu-dresden.de/rmo#&gt; \n&quot;;
+	private final static String prefixes = &quot;PREFIX prov: &lt;http://www.w3.org/ns/prov#&gt; \n&quot;
+			+ &quot;PREFIX dc-terms: &lt;http://purl.org/dc/terms/&gt; \n&quot;
+			+ prefix_rmo
+			+ &quot;PREFIX xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; \n&quot;
+			+ &quot;PREFIX prov: &lt;http://www.w3.org/ns/prov#&gt; \n&quot;
+			+ &quot;PREFIX rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; \n&quot;
+			+ &quot;PREFIX rpo: &lt;http://eatld.et.tu-dresden.de/rpo#&gt; \n&quot;
+			+ &quot;PREFIX sddo: &lt;http://eatld.et.tu-dresden.de/sddo#&gt; \n&quot;
+			+ &quot;PREFIX sdd: &lt;http://eatld.et.tu-dresden.de/sdd#&gt; \n&quot;;
+	
+	
+	/**
+	 * Get the common revision of the specified revisions which has the shortest path to the two.
+	 * To ensure wise results the revisions should be terminal branch nodes.
+	 * 
+	 * @param revision1 the first revision should be a terminal branch node
+	 * @param revision2 the second revision should be a terminal branch node
+	 * @return the nearest common revision
+	 */
+	public static String getCommonRevisionWithShortestPath(final String revisionGraph, final String revision1, final String revision2) {
+		
+<span class="fc" id="L60">		logger.info(&quot;Get the common revision of &lt;&quot; + revision1 + &quot;&gt; and &lt;&quot; + revision2 + &quot;&gt; which has the shortest path.&quot;);</span>
+		
+<span class="fc" id="L62">		String query = String.format(</span>
+			  &quot;PREFIX prov: &lt;http://www.w3.org/ns/prov#&gt; &quot;
+			  + &quot;SELECT DISTINCT ?revision &quot;
+			  + &quot;WHERE { &quot;
+			  + &quot;    GRAPH &lt;%s&gt; {&quot;
+			  + &quot;        &lt;%2$s&gt; prov:wasDerivedFrom+ ?revision .&quot;
+			  + &quot;        &lt;%3$s&gt; prov:wasDerivedFrom+ ?revision .&quot;
+			  + &quot;        ?next prov:wasDerivedFrom ?revision.&quot;
+			  + &quot;        FILTER NOT EXISTS {&quot;
+			  + &quot;            &lt;%2$s&gt; prov:wasDerivedFrom+ ?next .&quot;
+			  + &quot;            &lt;%3$s&gt; prov:wasDerivedFrom+ ?next .&quot;
+			  + &quot;        }&quot;
+			  + &quot;    }&quot;
+			  + &quot;}&quot;
+			  + &quot;LIMIT 1&quot;,
+			  revisionGraph, revision1, revision2);
+<span class="fc" id="L78">		ResultSet results = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+		
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">		if (results.hasNext()) {</span>
+<span class="fc" id="L81">			QuerySolution qs = results.next();</span>
+<span class="fc" id="L82">			logger.info(&quot;Common revision found.&quot;);</span>
+<span class="fc" id="L83">			return qs.getResource(&quot;?revision&quot;).toString();</span>
+		}
+		
+<span class="nc" id="L86">		logger.info(&quot;No common revision could be found.&quot;);</span>
+<span class="nc" id="L87">		return null;		</span>
+	}
+	
+	
+	/**
+	 * Calculate the path from start revision to target revision.
+	 * 
+	 * @param startRevision the start revision
+	 * @param targetRevision the target revision
+	 * @return linked list with all revisions from start revision to target revision
+	 */
+	public static LinkedList&lt;String&gt; getPathBetweenStartAndTargetRevision(
+			final String revisionGraph,	final String startRevision, final String targetRevision) {
+		
+<span class="fc" id="L101">		logger.info(&quot;Calculate the shortest path from revision &lt;&quot; + startRevision + &quot;&gt; to &lt;&quot; + targetRevision + &quot;&gt; .&quot;);</span>
+<span class="fc" id="L102">		String query = String.format(</span>
+			  &quot;PREFIX prov: &lt;http://www.w3.org/ns/prov#&gt; %n&quot;
+			+ &quot;SELECT DISTINCT ?revision ?previousRevision %n&quot;
+			+ &quot;WHERE { %n&quot;
+			+ &quot;	GRAPH &lt;%s&gt; { %n&quot;
+			+ &quot;		&lt;%s&gt; prov:wasDerivedFrom* ?revision.&quot;
+			+ &quot;		?revision prov:wasDerivedFrom* &lt;%s&gt;.&quot;
+			+ &quot;		OPTIONAL{?revision prov:wasDerivedFrom ?previousRevision}&quot;
+			+ &quot; }&quot;
+			+ &quot;}&quot;, revisionGraph, targetRevision, startRevision);
+		
+<span class="fc" id="L113">		HashMap&lt;String, ArrayList&lt;String&gt;&gt; resultMap = new HashMap&lt;String, ArrayList&lt;String&gt;&gt;();</span>
+<span class="fc" id="L114">		LinkedList&lt;String&gt; list = new LinkedList&lt;String&gt;();</span>
+		
+<span class="fc" id="L116">		ResultSet resultSet = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+
+		// Path element counter
+<span class="fc" id="L119">		int counterLength = 0;</span>
+		
+<span class="fc bfc" id="L121" title="All 2 branches covered.">		while (resultSet.hasNext()) {</span>
+<span class="fc" id="L122">			QuerySolution qs = resultSet.next();</span>
+<span class="fc" id="L123">			String resource = qs.getResource(&quot;?revision&quot;).toString();</span>
+<span class="fc" id="L124">			String previousResource = null;</span>
+<span class="fc bfc" id="L125" title="All 2 branches covered.">			if (qs.getResource(&quot;?previousRevision&quot;) != null) {</span>
+<span class="fc" id="L126">				previousResource = qs.getResource(&quot;?previousRevision&quot;).toString();</span>
+			}
+<span class="pc bpc" id="L128" title="1 of 2 branches missed.">			if (resultMap.containsKey(resource)) {</span>
+<span class="nc" id="L129">				resultMap.get(resource).add(previousResource);</span>
+			} else {
+<span class="fc" id="L131">				ArrayList&lt;String&gt; arrayList = new ArrayList&lt;String&gt;();</span>
+<span class="fc" id="L132">				counterLength++;</span>
+<span class="fc" id="L133">				arrayList.add(previousResource);</span>
+<span class="fc" id="L134">				resultMap.put(resource, arrayList);</span>
+			}
+<span class="fc" id="L136">		}</span>
+		
+		// Sort the result map -&gt; sorted list of path elements
+		// A merged revision can have two predecessors -&gt; it is important to choose the right predecessor revision according to the selected path
+<span class="fc" id="L140">		String currentPathElement = targetRevision;</span>
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">		for (int i = 0; i &lt; counterLength; i++) {</span>
+<span class="fc" id="L142">			list.addFirst(currentPathElement);</span>
+			
+			// Check if start revision was already reached
+<span class="fc bfc" id="L145" title="All 2 branches covered.">			if (currentPathElement.equals(startRevision)) {</span>
+<span class="fc" id="L146">				return list;</span>
+			}
+			
+<span class="pc bpc" id="L149" title="1 of 2 branches missed.">			if (resultMap.get(currentPathElement).size() &gt; 1) {</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">				if (resultMap.containsKey(resultMap.get(currentPathElement).get(0))) {</span>
+<span class="nc" id="L151">					currentPathElement = resultMap.get(currentPathElement).get(0);</span>
+				} else {
+<span class="nc" id="L153">					currentPathElement = resultMap.get(currentPathElement).get(1);</span>
+				}
+			} else {
+<span class="fc" id="L156">				currentPathElement = resultMap.get(currentPathElement).get(0);</span>
+			}
+		}
+
+<span class="nc" id="L160">		return list;</span>
+	}
+	
+	
+	/**
+	 * Create the revision progresses for both branches.
+	 * 
+	 * @param listA the linked list with all revisions from start revision to target revision of branch A
+	 * @param graphNameRevisionProgressA the graph name of the revision progress of branch A
+	 * @param uriA the URI of the revision progress of branch A
+	 * @param listB the linked list with all revisions from start revision to target revision branch B
+	 * @param graphNameRevisionProgressB the graph name of the revision progress of branch B
+	 * @param uriB the URI of the revision progress of branch B
+	 * @throws InternalErrorException 
+	 */
+	public static void createRevisionProgresses(final String revisionGraph, final String graphName,
+			LinkedList&lt;String&gt; listA, String graphNameRevisionProgressA, String uriA, 
+			LinkedList&lt;String&gt; listB, String graphNameRevisionProgressB, String uriB) throws InternalErrorException {
+<span class="fc" id="L178">		logger.info(&quot;Create the revision progress of branch A and B.&quot;);</span>
+		
+<span class="fc" id="L180">		RevisionGraph graph = new RevisionGraph(graphName);</span>
+		
+		// Get the common revision
+<span class="fc" id="L183">		String commonRevision = null;</span>
+<span class="pc bpc" id="L184" title="2 of 4 branches missed.">		if ((listA.size() &gt; 0) &amp;&amp; (listB.size() &gt; 0)) {</span>
+<span class="fc" id="L185">			commonRevision = listA.getFirst();</span>
+		} else {
+<span class="nc" id="L187">			throw new InternalErrorException(&quot;Revision path contains no revisions.&quot;);</span>
+		}
+
+		// Get the revision number of first revision
+<span class="fc" id="L191">		logger.info(&quot;Get the revision number of first revision.&quot;);</span>
+<span class="fc" id="L192">		String firstRevisionNumber = &quot;&quot;;</span>
+
+<span class="fc" id="L194">		String query = String.format(</span>
+			  &quot;SELECT ?number %n&quot;
+			+ &quot;WHERE { %n&quot;
+			+ &quot;	GRAPH &lt;%s&gt; {&quot;
+			+ &quot;		&lt;%s&gt; &lt;http://eatld.et.tu-dresden.de/rmo#revisionNumber&gt; ?number .&quot;
+			+ &quot;} }&quot;, revisionGraph, commonRevision, commonRevision);
+		
+<span class="fc" id="L201">		ResultSet results = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+		
+<span class="pc bpc" id="L203" title="1 of 2 branches missed.">		if (results.hasNext()) {</span>
+<span class="fc" id="L204">			QuerySolution qs = results.next();</span>
+<span class="fc" id="L205">			firstRevisionNumber = qs.getLiteral(&quot;?number&quot;).toString();</span>
+		}
+		
+		// Get the full graph name of first revision or create full revision graph of first revision
+<span class="fc" id="L209">		String fullGraphNameCommonRevision = &quot;&quot;;</span>
+<span class="fc" id="L210">		Boolean tempGraphWasCreated = false;</span>
+		try {
+<span class="fc" id="L212">			fullGraphNameCommonRevision = graph.getReferenceGraph(firstRevisionNumber);</span>
+<span class="fc" id="L213">		} catch (InternalErrorException e) {</span>
+			// Create a temporary full graph
+<span class="fc" id="L215">			fullGraphNameCommonRevision = graphName + &quot;RM-TEMP-REVISION-PROGRESS-FULLGRAPH&quot;;</span>
+<span class="fc" id="L216">			RevisionManagement.generateFullGraphOfRevision(graphName, firstRevisionNumber, fullGraphNameCommonRevision);</span>
+<span class="fc" id="L217">			tempGraphWasCreated = true;</span>
+<span class="fc" id="L218">		}</span>
+		
+		// Create revision progress of branch A
+<span class="fc" id="L221">		createRevisionProgress(revisionGraph, listA, fullGraphNameCommonRevision, graphNameRevisionProgressA, uriA);</span>
+		
+		// Create revision progress of branch A
+<span class="fc" id="L224">		createRevisionProgress(revisionGraph, listB, fullGraphNameCommonRevision, graphNameRevisionProgressB, uriB);</span>
+		
+		// Drop the temporary full graph
+<span class="fc bfc" id="L227" title="All 2 branches covered.">		if (tempGraphWasCreated) {</span>
+<span class="fc" id="L228">			logger.info(&quot;Drop the temporary full graph.&quot;);</span>
+<span class="fc" id="L229">			TripleStoreInterfaceSingleton.get().executeUpdateQuery(&quot;DROP SILENT GRAPH &lt;&quot; + fullGraphNameCommonRevision + &quot;&gt;&quot;);</span>
+		}
+		
+<span class="fc" id="L232">	}</span>
+	
+	
+	/**
+	 * Create the revision progress.
+	 * 
+	 * @param list the linked list with all revisions from start revision to target revision
+	 * @param fullGraphNameCommonRevision the full graph name of the common revision (first revision of path)
+	 * @param graphNameRevisionProgress the graph name of the revision progress
+	 * @param uri the URI of the revision progress
+	 * @throws InternalErrorException 
+	 */
+	public static void createRevisionProgress(final String revisionGraph, LinkedList&lt;String&gt; list, String fullGraphNameCommonRevision, String graphNameRevisionProgress, String uri) throws InternalErrorException {
+<span class="fc" id="L245">		logger.info(&quot;Create the revision progress of &quot; + uri + &quot; in graph &quot; + graphNameRevisionProgress + &quot;.&quot;);</span>
+		
+<span class="fc" id="L247">		TripleStoreInterfaceSingleton.get().executeUpdateQuery(String.format(&quot;DROP SILENT GRAPH &lt;%s&gt;&quot;, graphNameRevisionProgress));</span>
+<span class="fc" id="L248">		TripleStoreInterfaceSingleton.get().executeUpdateQuery(String.format(&quot;CREATE GRAPH  &lt;%s&gt;&quot;, graphNameRevisionProgress));</span>
+<span class="fc" id="L249">		Iterator&lt;String&gt; iteList = list.iterator();</span>
+		
+<span class="pc bpc" id="L251" title="1 of 2 branches missed.">		if (iteList.hasNext()) {</span>
+<span class="fc" id="L252">			String firstRevision = iteList.next();</span>
+			
+			// Create the initial content
+<span class="fc" id="L255">			logger.info(&quot;Create the initial content.&quot;);</span>
+<span class="fc" id="L256">			String queryInitial = prefixes + String.format(	</span>
+				  &quot;INSERT { GRAPH &lt;%s&gt; { %n&quot;
+				+ &quot;	&lt;%s&gt; a rpo:RevisionProgress; %n&quot;
+				+ &quot;		rpo:original [ %n&quot;
+				+ &quot;			rdf:subject ?s ; %n&quot;
+				+ &quot;			rdf:predicate ?p ; %n&quot;
+				+ &quot;			rdf:object ?o ; %n&quot;
+				+ &quot;			rmo:references &lt;%s&gt; %n&quot;
+				+ &quot;		] %n&quot;
+				+ &quot;} } WHERE { %n&quot;
+				+ &quot;	GRAPH &lt;%s&gt; %n&quot;
+				+ &quot;		{ ?s ?p ?o . } %n&quot;
+				+ &quot;}&quot;,graphNameRevisionProgress, uri, firstRevision, fullGraphNameCommonRevision);
+		
+			// Execute the query which generates the initial content
+<span class="fc" id="L271">			TripleStoreInterfaceSingleton.get().executeUpdateQuery(queryInitial);</span>
+						
+			// Update content by current add and delete set - remove old entries
+<span class="fc bfc" id="L274" title="All 2 branches covered.">			while (iteList.hasNext()) {</span>
+<span class="fc" id="L275">				String revision = iteList.next();</span>
+<span class="fc" id="L276">				logger.info(&quot;Update content by current add and delete set of revision &quot; + revision + &quot; - remove old entries.&quot;);</span>
+				// Get the ADD and DELETE set URIs
+<span class="fc" id="L278">				String addSetURI = RevisionManagement.getAddSetURI(revision, revisionGraph);</span>
+<span class="fc" id="L279">				String deleteSetURI = RevisionManagement.getDeleteSetURI(revision, revisionGraph);</span>
+				
+<span class="pc bpc" id="L281" title="2 of 4 branches missed.">				if ((addSetURI != null) &amp;&amp; (deleteSetURI != null)) {</span>
+					
+					// Update the revision progress with the data of the current revision ADD set
+					
+					// Delete old entries (original)
+<span class="fc" id="L286">					String queryRevision = prefixes + String.format(</span>
+						  &quot;DELETE { GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;	&lt;%s&gt; rpo:original ?blank . %n&quot;
+						+ &quot;	?blank rdf:subject ?s . %n&quot;
+						+ &quot;	?blank rdf:predicate ?p . %n&quot;
+						+ &quot;	?blank rdf:object ?o . %n&quot;
+						+ &quot;	?blank rmo:references ?revision . %n&quot;
+						+ &quot;} } %n&quot;
+						+ &quot;WHERE { &quot;
+						+ &quot;		GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;			&lt;%s&gt; rpo:original ?blank . %n&quot;
+						+ &quot;			?blank rdf:subject ?s . %n&quot;
+						+ &quot;			?blank rdf:predicate ?p . %n&quot;
+						+ &quot;			?blank rdf:object ?o . %n&quot;
+						+ &quot;			?blank rmo:references ?revision . %n&quot;
+						+ &quot;		} %n&quot;
+						+ &quot;		GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;			?s ?p ?o %n&quot;
+						+ &quot;		} %n&quot;
+						+ &quot;};&quot;, graphNameRevisionProgress, uri, graphNameRevisionProgress, uri, addSetURI);
+					
+<span class="fc" id="L307">					queryRevision += &quot;\n&quot;;</span>
+					
+					// Delete old entries (added)
+<span class="fc" id="L310">					queryRevision += String.format(</span>
+						  &quot;DELETE { GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;	&lt;%s&gt; rpo:added ?blank . %n&quot;
+						+ &quot;	?blank rdf:subject ?s . %n&quot;
+						+ &quot;	?blank rdf:predicate ?p . %n&quot;
+						+ &quot;	?blank rdf:object ?o . %n&quot;
+						+ &quot;	?blank rmo:references ?revision . %n&quot;
+						+ &quot;} } %n&quot;
+						+ &quot;WHERE { &quot;
+						+ &quot;		GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;			&lt;%s&gt; rpo:added ?blank . %n&quot;
+						+ &quot;			?blank rdf:subject ?s . %n&quot;
+						+ &quot;			?blank rdf:predicate ?p . %n&quot;
+						+ &quot;			?blank rdf:object ?o . %n&quot;
+						+ &quot;			?blank rmo:references ?revision . %n&quot;
+						+ &quot;		} %n&quot;
+						+ &quot;		GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;			?s ?p ?o %n&quot;
+						+ &quot;		} %n&quot;
+						+ &quot;};&quot;, graphNameRevisionProgress, uri, graphNameRevisionProgress, uri, addSetURI);
+					
+<span class="fc" id="L331">					queryRevision += &quot;\n&quot;;</span>
+					
+					// Delete old entries (removed)
+<span class="fc" id="L334">					queryRevision += String.format(</span>
+						  &quot;DELETE { GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;	&lt;%s&gt; rpo:removed ?blank . %n&quot;
+						+ &quot;	?blank rdf:subject ?s . %n&quot;
+						+ &quot;	?blank rdf:predicate ?p . %n&quot;
+						+ &quot;	?blank rdf:object ?o . %n&quot;
+						+ &quot;	?blank rmo:references ?revision . %n&quot;
+						+ &quot;} } %n&quot;
+						+ &quot;WHERE { &quot;
+						+ &quot;		GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;			&lt;%s&gt; rpo:removed ?blank . %n&quot;
+						+ &quot;			?blank rdf:subject ?s . %n&quot;
+						+ &quot;			?blank rdf:predicate ?p . %n&quot;
+						+ &quot;			?blank rdf:object ?o . %n&quot;
+						+ &quot;			?blank rmo:references ?revision . %n&quot;
+						+ &quot;		} %n&quot;
+						+ &quot;		GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;			?s ?p ?o %n&quot;
+						+ &quot;		} %n&quot;
+						+ &quot;};&quot;, graphNameRevisionProgress, uri, graphNameRevisionProgress, uri, addSetURI);
+					
+<span class="fc" id="L355">					queryRevision += &quot;\n&quot;;</span>
+					
+					// Insert new entries (added)
+<span class="fc" id="L358">					queryRevision += String.format(	</span>
+						  &quot;INSERT { GRAPH &lt;%s&gt; {%n&quot;
+						+ &quot;	&lt;%s&gt; a rpo:RevisionProgress; %n&quot;
+						+ &quot;		rpo:added [ %n&quot;
+						+ &quot;			rdf:subject ?s ; %n&quot;
+						+ &quot;			rdf:predicate ?p ; %n&quot;
+						+ &quot;			rdf:object ?o ; %n&quot;
+						+ &quot;			rmo:references &lt;%s&gt; %n&quot;
+						+ &quot;		] %n&quot;
+						+ &quot;} } WHERE { %n&quot;
+						+ &quot;	GRAPH &lt;%s&gt; %n&quot;
+						+ &quot;		{ ?s ?p ?o . } %n&quot;
+						+ &quot;};&quot;, graphNameRevisionProgress, uri, revision, addSetURI);
+					
+<span class="fc" id="L372">					queryRevision += &quot;\n \n&quot;;</span>
+					
+					// Update the revision progress with the data of the current revision DELETE set
+					
+					// Delete old entries (original)
+<span class="fc" id="L377">					queryRevision += String.format(</span>
+						  &quot;DELETE { GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;	&lt;%s&gt; rpo:original ?blank . %n&quot;
+						+ &quot;	?blank rdf:subject ?s . %n&quot;
+						+ &quot;	?blank rdf:predicate ?p . %n&quot;
+						+ &quot;	?blank rdf:object ?o . %n&quot;
+						+ &quot;	?blank rmo:references ?revision . %n&quot;
+						+ &quot;} } %n&quot;
+						+ &quot;WHERE { &quot;
+						+ &quot;		GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;			&lt;%s&gt; rpo:original ?blank . %n&quot;
+						+ &quot;			?blank rdf:subject ?s . %n&quot;
+						+ &quot;			?blank rdf:predicate ?p . %n&quot;
+						+ &quot;			?blank rdf:object ?o . %n&quot;
+						+ &quot;			?blank rmo:references ?revision . %n&quot;
+						+ &quot;		} %n&quot;
+						+ &quot;		GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;			?s ?p ?o %n&quot;
+						+ &quot;		} %n&quot;
+						+ &quot;};&quot;, graphNameRevisionProgress, uri, graphNameRevisionProgress, uri, deleteSetURI);
+					
+<span class="fc" id="L398">					queryRevision += &quot;\n&quot;;</span>
+					
+					// Delete old entries (added)
+<span class="fc" id="L401">					queryRevision += String.format(</span>
+						  &quot;DELETE { GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;	&lt;%s&gt; rpo:added ?blank . %n&quot;
+						+ &quot;	?blank rdf:subject ?s . %n&quot;
+						+ &quot;	?blank rdf:predicate ?p . %n&quot;
+						+ &quot;	?blank rdf:object ?o . %n&quot;
+						+ &quot;	?blank rmo:references ?revision . %n&quot;
+						+ &quot;} } %n&quot;
+						+ &quot;WHERE { &quot;
+						+ &quot;		GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;			&lt;%s&gt; rpo:added ?blank . %n&quot;
+						+ &quot;			?blank rdf:subject ?s . %n&quot;
+						+ &quot;			?blank rdf:predicate ?p . %n&quot;
+						+ &quot;			?blank rdf:object ?o . %n&quot;
+						+ &quot;			?blank rmo:references ?revision . %n&quot;
+						+ &quot;		} %n&quot;
+						+ &quot;		GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;			?s ?p ?o %n&quot;
+						+ &quot;		} %n&quot;
+						+ &quot;};&quot;, graphNameRevisionProgress, uri, graphNameRevisionProgress, uri, deleteSetURI);
+					
+<span class="fc" id="L422">					queryRevision += &quot;\n&quot;;</span>
+					
+					// Delete old entries (removed)
+<span class="fc" id="L425">					queryRevision += String.format(</span>
+						  &quot;DELETE { GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;	&lt;%s&gt; rpo:removed ?blank . %n&quot;
+						+ &quot;	?blank rdf:subject ?s . %n&quot;
+						+ &quot;	?blank rdf:predicate ?p . %n&quot;
+						+ &quot;	?blank rdf:object ?o . %n&quot;
+						+ &quot;	?blank rmo:references ?revision . %n&quot;
+						+ &quot;} } %n&quot;
+						+ &quot;WHERE { &quot;
+						+ &quot;		GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;			&lt;%s&gt; rpo:removed ?blank . %n&quot;
+						+ &quot;			?blank rdf:subject ?s . %n&quot;
+						+ &quot;			?blank rdf:predicate ?p . %n&quot;
+						+ &quot;			?blank rdf:object ?o . %n&quot;
+						+ &quot;			?blank rmo:references ?revision . %n&quot;
+						+ &quot;		} %n&quot;
+						+ &quot;		GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;			?s ?p ?o %n&quot;
+						+ &quot;		} %n&quot;
+						+ &quot;};&quot;, graphNameRevisionProgress, uri, graphNameRevisionProgress, uri, deleteSetURI);
+					
+<span class="fc" id="L446">					queryRevision += &quot;\n&quot;;</span>
+					
+					// Insert new entries (removed)
+<span class="fc" id="L449">					queryRevision += String.format(	</span>
+						  &quot;INSERT { GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;	&lt;%s&gt; a rpo:RevisionProgress; %n&quot;
+						+ &quot;		rpo:removed [ %n&quot;
+						+ &quot;			rdf:subject ?s ; %n&quot;
+						+ &quot;			rdf:predicate ?p ; %n&quot;
+						+ &quot;			rdf:object ?o ; %n&quot;
+						+ &quot;			rmo:references &lt;%s&gt; %n&quot;
+						+ &quot;		] %n&quot;
+						+ &quot;} } WHERE { %n&quot;
+						+ &quot;	GRAPH &lt;%s&gt; %n&quot;
+						+ &quot;		{ ?s ?p ?o . } %n&quot;
+						+ &quot;}&quot;, graphNameRevisionProgress, uri, revision, deleteSetURI);
+				
+					// Execute the query which updates the revision progress by the current revision
+<span class="fc" id="L464">					TripleStoreInterfaceSingleton.get().executeUpdateQuery(queryRevision);</span>
+
+<span class="fc" id="L466">				} else {</span>
+					//TODO Error management - is needed when a ADD or DELETE set is not referenced in the current implementation this error should not occur
+<span class="nc" id="L468">					logger.error(&quot;ADD or DELETE set of &quot; + revision + &quot;does not exists.&quot;);</span>
+				}
+<span class="fc" id="L470">				logger.info(&quot;Revision progress was created.&quot;);</span>
+<span class="fc" id="L471">			}</span>
+		}
+<span class="fc" id="L473">	}</span>
+
+	
+	/**
+	 * Create the difference triple model which contains all differing triples.
+	 * 
+	 * @param graphName the graph name
+	 * @param graphNameDifferenceTripleModel the graph name of the difference triple model
+	 * @param graphNameRevisionProgressA the graph name of the revision progress of branch A
+	 * @param uriA the URI of the revision progress of branch A
+	 * @param graphNameRevisionProgressB the graph name of the revision progress of branch B
+	 * @param uriB the URI of the revision progress of branch B
+	 * @param uriSDD the URI of the SDD to use
+	 */
+	public static void createDifferenceTripleModel(String graphName, String graphNameDifferenceTripleModel, String graphNameRevisionProgressA, String uriA, String graphNameRevisionProgressB, String uriB, String uriSDD){
+		
+<span class="fc" id="L489">		logger.info(&quot;Create the difference triple model&quot;);</span>
+<span class="fc" id="L490">		TripleStoreInterfaceSingleton.get().executeUpdateQuery(String.format(&quot;DROP SILENT GRAPH &lt;%s&gt;&quot;, graphNameDifferenceTripleModel));</span>
+<span class="fc" id="L491">		TripleStoreInterfaceSingleton.get().executeUpdateQuery(String.format(&quot;CREATE GRAPH  &lt;%s&gt;&quot;, graphNameDifferenceTripleModel));</span>
+		
+		// Templates for revision A and B
+<span class="fc" id="L494">		String sparqlTemplateRevisionA = String.format(</span>
+				  &quot;	GRAPH &lt;%s&gt; { %n&quot;
+				+ &quot;		&lt;%s&gt; &lt;%s&gt; ?blankA . %n&quot;
+				+ &quot;			?blankA rdf:subject ?s . %n&quot;
+				+ &quot;			?blankA rdf:predicate ?p . %n&quot;
+				+ &quot;			?blankA rdf:object ?o . %n&quot;
+				+ &quot;			?blankA rmo:references ?revisionA . %n&quot;
+				+ &quot;	} %n&quot;, graphNameRevisionProgressA, uriA, &quot;%s&quot;);
+<span class="fc" id="L502">		String sparqlTemplateRevisionB = String.format(</span>
+				  &quot;	GRAPH &lt;%s&gt; { %n&quot;
+				+ &quot;		&lt;%s&gt; &lt;%s&gt; ?blankB . %n&quot;
+				+ &quot;			?blankB rdf:subject ?s . %n&quot;
+				+ &quot;			?blankB rdf:predicate ?p . %n&quot;
+				+ &quot;			?blankB rdf:object ?o . %n&quot;
+				+ &quot;			?blankB rmo:references ?revisionB . %n&quot;
+				+ &quot;	} %n&quot;, graphNameRevisionProgressB, uriB, &quot;%s&quot;);
+
+<span class="fc" id="L511">		String sparqlTemplateNotExistsRevisionA = String.format(</span>
+				  &quot;FILTER NOT EXISTS { %n&quot;
+				+ &quot;	GRAPH &lt;%s&gt; { %n&quot;
+				+ &quot;		&lt;%s&gt; ?everything ?blankA . %n&quot;
+				+ &quot;			?blankA rdf:subject ?s . %n&quot;
+				+ &quot;			?blankA rdf:predicate ?p . %n&quot;
+				+ &quot;			?blankA rdf:object ?o . %n&quot;
+				+ &quot;			?blankA rmo:references ?revisionA . %n&quot;
+				+ &quot;	} %n&quot;
+				+ &quot;}&quot;, graphNameRevisionProgressA, uriA);
+		
+<span class="fc" id="L522">		String sparqlTemplateNotExistsRevisionB = String.format(</span>
+				  &quot;FILTER NOT EXISTS { %n&quot;
+				+ &quot;	GRAPH &lt;%s&gt; { %n&quot;
+				+ &quot;		&lt;%s&gt; ?everything ?blankB . %n&quot;
+				+ &quot;			?blankB rdf:subject ?s . %n&quot;
+				+ &quot;			?blankB rdf:predicate ?p . %n&quot;
+				+ &quot;			?blankB rdf:object ?o . %n&quot;
+				+ &quot;			?blankB rmo:references ?revisionB . %n&quot;
+				+ &quot;	} %n&quot;
+				+ &quot;}&quot;, graphNameRevisionProgressB, uriB);
+		
+		// Get all structural definitions which are generating differences
+<span class="fc" id="L534">		String queryDifferingSD = String.format(</span>
+				  &quot;PREFIX sddo: &lt;http://eatld.et.tu-dresden.de/sddo#&gt; %n&quot;
+				+ &quot;PREFIX sdd:  &lt;http://eatld.et.tu-dresden.de/sdd#&gt; %n&quot;
+				+ &quot;PREFIX xsd:  &lt;http://www.w3.org/2001/XMLSchema#&gt; %n&quot;
+				+ &quot;SELECT ?combinationURI ?tripleStateA ?tripleStateB ?conflict ?automaticResolutionState %n&quot;
+				+ &quot;WHERE { GRAPH &lt;%s&gt; { %n&quot;
+				+ &quot;	&lt;%s&gt; a sddo:StructuralDefinitionGroup ;&quot;
+				+ &quot;		sddo:hasStructuralDefinition ?combinationURI .&quot;
+				+ &quot;	?combinationURI a sddo:StructuralDefinition ; %n&quot;
+				+ &quot;		sddo:hasTripleStateA ?tripleStateA ; %n&quot;
+				+ &quot;		sddo:hasTripleStateB ?tripleStateB ; %n&quot;
+				+ &quot;		sddo:isConflicting ?conflict ; %n&quot;
+				+ &quot;		sddo:automaticResolutionState ?automaticResolutionState . %n&quot;
+				+ &quot;} } %n&quot;, Config.sdd_graph, uriSDD);
+				
+		// Iterate over all differing combination URIs
+<span class="fc" id="L550">		ResultSet resultSetDifferences = TripleStoreInterfaceSingleton.get().executeSelectQuery(queryDifferingSD);</span>
+<span class="fc bfc" id="L551" title="All 2 branches covered.">		while (resultSetDifferences.hasNext()) {</span>
+<span class="fc" id="L552">			QuerySolution qs = resultSetDifferences.next();</span>
+
+<span class="fc" id="L554">			String currentDifferenceCombinationURI = qs.getResource(&quot;?combinationURI&quot;).toString();</span>
+<span class="fc" id="L555">			String currentTripleStateA = qs.getResource(&quot;?tripleStateA&quot;).toString();</span>
+<span class="fc" id="L556">			String currentTripleStateB = qs.getResource(&quot;?tripleStateB&quot;).toString();</span>
+			// Will return an integer value because virtuoso stores boolean internal as integer
+<span class="fc" id="L558">			String currentConflictState = qs.getLiteral(&quot;?conflict&quot;).toString();</span>
+			// TDB returns boolean value without &quot;&quot; -&gt; add it to use it in the next query correctly
+<span class="fc bfc" id="L560" title="All 2 branches covered.">			if (currentConflictState.equals(&quot;true^^http://www.w3.org/2001/XMLSchema#boolean&quot;)) {</span>
+<span class="fc" id="L561">				currentConflictState = &quot;\&quot;true\&quot;^^&lt;http://www.w3.org/2001/XMLSchema#boolean&gt;&quot;;</span>
+			} else {
+<span class="fc" id="L563">				currentConflictState = &quot;\&quot;false\&quot;^^&lt;http://www.w3.org/2001/XMLSchema#boolean&gt;&quot;;</span>
+			}
+<span class="fc" id="L565">			String currentAutomaticResolutionState = qs.getResource(&quot;?automaticResolutionState&quot;).toString();</span>
+			
+<span class="fc" id="L567">			String querySelectPart = &quot;SELECT ?s ?p ?o %s %s %n&quot;;</span>
+<span class="fc" id="L568">			String sparqlQueryRevisionA = null;</span>
+<span class="fc" id="L569">			String sparqlQueryRevisionB = null;			</span>
+			
+			// A
+<span class="fc bfc" id="L572" title="All 2 branches covered.">			if (currentTripleStateA.equals(SDDTripleStateEnum.ADDED.getSddRepresentation())) {</span>
+				// In revision A the triple was added
+<span class="fc" id="L574">				querySelectPart = String.format(querySelectPart, &quot;?revisionA&quot;, &quot;%s&quot;);</span>
+<span class="fc" id="L575">				sparqlQueryRevisionA = String.format(sparqlTemplateRevisionA, SDDTripleStateEnum.ADDED.getRpoRepresentation());</span>
+<span class="fc bfc" id="L576" title="All 2 branches covered.">			} else if (currentTripleStateA.equals(SDDTripleStateEnum.DELETED.getSddRepresentation())) {</span>
+				// In revision A the triple was deleted
+<span class="fc" id="L578">				querySelectPart = String.format(querySelectPart, &quot;?revisionA&quot;, &quot;%s&quot;);</span>
+<span class="fc" id="L579">				sparqlQueryRevisionA = String.format(sparqlTemplateRevisionA, SDDTripleStateEnum.DELETED.getRpoRepresentation());</span>
+<span class="fc bfc" id="L580" title="All 2 branches covered.">			} else if (currentTripleStateA.equals(SDDTripleStateEnum.ORIGINAL.getSddRepresentation())) {</span>
+				// In revision A the triple is original
+<span class="fc" id="L582">				querySelectPart = String.format(querySelectPart, &quot;?revisionA&quot;, &quot;%s&quot;);</span>
+<span class="fc" id="L583">				sparqlQueryRevisionA = String.format(sparqlTemplateRevisionA, SDDTripleStateEnum.ORIGINAL.getRpoRepresentation());</span>
+<span class="pc bpc" id="L584" title="1 of 2 branches missed.">			} else if (currentTripleStateA.equals(SDDTripleStateEnum.NOTINCLUDED.getSddRepresentation())) {</span>
+				// In revision A the triple is not included
+<span class="fc" id="L586">				querySelectPart = String.format(querySelectPart, &quot;&quot;, &quot;%s&quot;);</span>
+<span class="fc" id="L587">				sparqlQueryRevisionA = sparqlTemplateNotExistsRevisionA;</span>
+			}
+			
+			// B
+<span class="fc bfc" id="L591" title="All 2 branches covered.">			if (currentTripleStateB.equals(SDDTripleStateEnum.ADDED.getSddRepresentation())) {</span>
+				// In revision B the triple was added
+<span class="fc" id="L593">				querySelectPart = String.format(querySelectPart, &quot;?revisionB&quot;);</span>
+<span class="fc" id="L594">				sparqlQueryRevisionB = String.format(sparqlTemplateRevisionB, SDDTripleStateEnum.ADDED.getRpoRepresentation());</span>
+<span class="fc bfc" id="L595" title="All 2 branches covered.">			} else if (currentTripleStateB.equals(SDDTripleStateEnum.DELETED.getSddRepresentation())) {</span>
+				// In revision B the triple was deleted
+<span class="fc" id="L597">				querySelectPart = String.format(querySelectPart, &quot;?revisionB&quot;);</span>
+<span class="fc" id="L598">				sparqlQueryRevisionB = String.format(sparqlTemplateRevisionB, SDDTripleStateEnum.DELETED.getRpoRepresentation());</span>
+<span class="fc bfc" id="L599" title="All 2 branches covered.">			} else if (currentTripleStateB.equals(SDDTripleStateEnum.ORIGINAL.getSddRepresentation())) {</span>
+				// In revision B the triple is original
+<span class="fc" id="L601">				querySelectPart = String.format(querySelectPart, &quot;?revisionB&quot;);</span>
+<span class="fc" id="L602">				sparqlQueryRevisionB = String.format(sparqlTemplateRevisionB, SDDTripleStateEnum.ORIGINAL.getRpoRepresentation());</span>
+<span class="pc bpc" id="L603" title="1 of 2 branches missed.">			} else if (currentTripleStateB.equals(SDDTripleStateEnum.NOTINCLUDED.getSddRepresentation())) {</span>
+				// In revision B the triple is not included
+<span class="fc" id="L605">				querySelectPart = String.format(querySelectPart, &quot;&quot;);</span>
+<span class="fc" id="L606">				sparqlQueryRevisionB = sparqlTemplateNotExistsRevisionB;</span>
+			}
+		
+			// Concatenated SPARQL query
+<span class="fc" id="L610">			String query = String.format(</span>
+					prefixes
+					+ &quot;%s&quot;
+					+ &quot;WHERE { %n&quot;
+					+ &quot;%s&quot;
+					+ &quot;%s&quot;
+					+ &quot;} %n&quot;, querySelectPart, sparqlQueryRevisionA, sparqlQueryRevisionB);
+					
+			// Iterate over all triples
+<span class="fc" id="L619">			ResultSet resultSetTriples = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+<span class="fc bfc" id="L620" title="All 2 branches covered.">			while (resultSetTriples.hasNext()) {</span>
+<span class="fc" id="L621">				QuerySolution qsQuery = resultSetTriples.next();</span>
+				
+<span class="fc" id="L623">				String subject = qsQuery.getResource(&quot;?s&quot;).toString();</span>
+<span class="fc" id="L624">				String predicate = qsQuery.getResource(&quot;?p&quot;).toString();</span>
+
+				// Differ between literal and resource
+<span class="fc" id="L627">				String object = &quot;&quot;;</span>
+<span class="pc bpc" id="L628" title="1 of 2 branches missed.">				if (qsQuery.get(&quot;?o&quot;).isLiteral()) {</span>
+<span class="fc" id="L629">					object = &quot;\&quot;&quot; + qsQuery.getLiteral(&quot;?o&quot;).toString() + &quot;\&quot;&quot;;</span>
+				} else {
+<span class="nc" id="L631">					object = &quot;&lt;&quot; + qsQuery.getResource(&quot;?o&quot;).toString() + &quot;&gt;&quot;;</span>
+				}
+				
+				// Create the references A and B part of the query
+<span class="fc" id="L635">				String referencesAB = &quot;. %n&quot;;</span>
+<span class="fc bfc" id="L636" title="All 4 branches covered.">				if (!currentTripleStateA.equals(SDDTripleStateEnum.NOTINCLUDED.getSddRepresentation()) &amp;&amp; !currentTripleStateB.equals(SDDTripleStateEnum.NOTINCLUDED.getSddRepresentation())) {</span>
+<span class="fc" id="L637">					referencesAB = String.format(</span>
+							  &quot;			rpo:referencesA &lt;%s&gt; ; %n&quot;
+							+ &quot;			rpo:referencesB &lt;%s&gt; %n&quot;, qsQuery.getResource(&quot;?revisionA&quot;).toString(), 
+																qsQuery.getResource(&quot;?revisionB&quot;).toString());
+<span class="pc bpc" id="L641" title="1 of 4 branches missed.">				} else if (currentTripleStateA.equals(SDDTripleStateEnum.NOTINCLUDED.getSddRepresentation()) &amp;&amp; !currentTripleStateB.equals(SDDTripleStateEnum.NOTINCLUDED.getSddRepresentation())) {</span>
+<span class="fc" id="L642">					referencesAB = String.format(</span>
+							  &quot;			rpo:referencesB &lt;%s&gt; %n&quot;, qsQuery.getResource(&quot;?revisionB&quot;).toString());
+<span class="pc bpc" id="L644" title="2 of 4 branches missed.">				} else if (!currentTripleStateA.equals(SDDTripleStateEnum.NOTINCLUDED.getSddRepresentation()) &amp;&amp; currentTripleStateB.equals(SDDTripleStateEnum.NOTINCLUDED.getSddRepresentation())) {</span>
+<span class="fc" id="L645">					referencesAB = String.format(</span>
+							  &quot;			rpo:referencesA &lt;%s&gt; %n&quot;, qsQuery.getResource(&quot;?revisionA&quot;).toString());
+				}
+				
+<span class="fc" id="L649">				String queryTriple = prefixes + String.format(</span>
+						  &quot;INSERT DATA { GRAPH &lt;%s&gt; {%n&quot;
+						+ &quot;	&lt;%s&gt; a rpo:DifferenceGroup ; %n&quot;
+						+ &quot;	sddo:hasTripleStateA &lt;%s&gt; ; %n&quot;
+						+ &quot;	sddo:hasTripleStateB &lt;%s&gt; ; %n&quot;
+						+ &quot;	sddo:isConflicting %s ; %n&quot;
+						+ &quot;	sddo:automaticResolutionState &lt;%s&gt; ; %n&quot;
+						+ &quot;	rpo:hasDifference [ %n&quot;
+						+ &quot;		a rpo:Difference ; %n&quot;
+						+ &quot;			rpo:hasTriple [ %n&quot;
+						+ &quot;				rdf:subject &lt;%s&gt; ; %n&quot;
+						+ &quot;				rdf:predicate &lt;%s&gt; ; %n&quot;
+						+ &quot;				rdf:object %s %n&quot;
+						+ &quot;			] ; %n&quot;
+						+ &quot;%s&quot;
+						+ &quot;	] . %n&quot;
+						+ &quot;} }&quot;, graphNameDifferenceTripleModel, 
+									currentDifferenceCombinationURI, 
+									currentTripleStateA, 
+									currentTripleStateB,
+									currentConflictState,
+									currentAutomaticResolutionState,
+									subject, 
+									predicate,
+									object,
+									referencesAB);
+				
+<span class="fc" id="L676">				TripleStoreInterfaceSingleton.get().executeUpdateQuery(queryTriple);</span>
+<span class="fc" id="L677">			}</span>
+<span class="fc" id="L678">		}</span>
+<span class="fc" id="L679">	}</span>
+	
+	
+	/**
+	 * Create a merged revision.
+	 * 
+	 * @param graphName the graph name
+	 * @param branchNameA the name of branch A
+	 * @param branchNameB the name of branch B
+	 * @param user the user
+	 * @param commitMessage the commit message
+	 * @param graphNameDifferenceTripleModel the graph name of the difference triple model
+	 * @param graphNameRevisionProgressA the graph name of the revisions progress A
+	 * @param uriA the URI A
+	 * @param graphNameRevisionProgressB the graph name of the revisions progress B
+	 * @param uriB the URI B
+	 * @param uriSDD the URI of the SDD
+	 * @param type the merge query type
+	 * @param triples the triples which are belonging to the current merge query in N-Triple serialization
+	 * @return new revision number
+	 * @throws InternalErrorException 
+	 */
+	public static String createMergedRevision(final R43plesMergeCommit commit, String graphNameDifferenceTripleModel, String graphNameRevisionProgressA, String uriA, String graphNameRevisionProgressB, String uriB, String uriSDD, MergeQueryTypeEnum type) throws InternalErrorException {
+		 
+<span class="fc" id="L703">		RevisionGraph graph = new RevisionGraph(commit.graphName);</span>
+				
+		// Create an empty temporary graph which will contain the merged full content
+<span class="fc" id="L706">		String graphNameOfMerged = commit.graphName + &quot;-RM-MERGED-TEMP&quot;;</span>
+<span class="fc" id="L707">		TripleStoreInterfaceSingleton.get().executeUpdateQuery(String.format(&quot;DROP SILENT GRAPH &lt;%s&gt;&quot;, graphNameOfMerged));</span>
+<span class="fc" id="L708">		TripleStoreInterfaceSingleton.get().executeCreateGraph(graphNameOfMerged);</span>
+		
+		// Get the full graph name of branch A
+<span class="fc" id="L711">		String graphNameOfBranchA = graph.getReferenceGraph(commit.branchNameA);</span>
+		// Get the full graph name of branch B
+<span class="fc" id="L713">		String graphNameOfBranchB = graph.getReferenceGraph(commit.branchNameB);</span>
+		
+<span class="fc bfc" id="L715" title="All 2 branches covered.">		if (type.equals(MergeQueryTypeEnum.MANUAL)) {</span>
+			// Manual merge query
+<span class="fc" id="L717">			RevisionManagement.executeINSERT(graphNameOfMerged, commit.triples);</span>
+		} else {	
+			// Copy graph B to temporary merged graph
+<span class="fc" id="L720">			String queryCopy = String.format(&quot;COPY &lt;%s&gt; TO &lt;%s&gt;&quot;, graphNameOfBranchB, graphNameOfMerged);</span>
+<span class="fc" id="L721">			TripleStoreInterfaceSingleton.get().executeUpdateQuery(queryCopy);</span>
+			
+			// Get the triples from branch A which should be added to/removed from the merged revision
+<span class="fc" id="L724">			String triplesToAdd = &quot;&quot;;</span>
+<span class="fc" id="L725">			String triplesToDelete = &quot;&quot;;</span>
+			
+			// Get all difference groups
+<span class="fc" id="L728">			String queryDifferenceGroup = prefixes + String.format(</span>
+					  &quot;SELECT ?differenceCombinationURI ?automaticResolutionState ?tripleStateA ?tripleStateB ?conflict %n&quot;
+					+ &quot;WHERE { GRAPH &lt;%s&gt; { %n&quot;
+					+ &quot;	?differenceCombinationURI a rpo:DifferenceGroup ; %n&quot;
+					+ &quot;		sddo:automaticResolutionState ?automaticResolutionState ; %n&quot;
+					+ &quot;		sddo:hasTripleStateA ?tripleStateA ; %n&quot;
+					+ &quot;		sddo:hasTripleStateB ?tripleStateB ; %n&quot;
+					+ &quot;		sddo:isConflicting ?conflict . %n&quot;
+					+ &quot;} }&quot;, graphNameDifferenceTripleModel);
+	
+			// Iterate over all difference groups
+<span class="fc" id="L739">			ResultSet resultSetDifferenceGroups = TripleStoreInterfaceSingleton.get().executeSelectQuery(queryDifferenceGroup);</span>
+<span class="fc bfc" id="L740" title="All 2 branches covered.">			while (resultSetDifferenceGroups.hasNext()) {</span>
+<span class="fc" id="L741">				QuerySolution qsCurrentDifferenceGroup = resultSetDifferenceGroups.next();</span>
+	
+<span class="fc" id="L743">				String currentDifferencGroupURI = qsCurrentDifferenceGroup.getResource(&quot;?differenceCombinationURI&quot;).toString();</span>
+<span class="fc" id="L744">				String currentDifferencGroupAutomaticResolutionState = qsCurrentDifferenceGroup.getResource(&quot;?automaticResolutionState&quot;).toString();</span>
+//				Currently not needed
+//				String currentDifferencGroupTripleStateA = qsCurrentDifferenceGroup.getResource(&quot;?tripleStateA&quot;).toString();
+//				String currentDifferencGroupTripleStateB = qsCurrentDifferenceGroup.getResource(&quot;?tripleStateB&quot;).toString();
+<span class="fc" id="L748">				boolean currentDifferencGroupConflict = qsCurrentDifferenceGroup.getLiteral(&quot;?conflict&quot;).getBoolean();</span>
+				
+				// Get all differences (triples) of current difference group
+<span class="fc" id="L751">				String queryDifference = prefixes + String.format(</span>
+						  &quot;SELECT ?s ?p ?o %n&quot;
+						+ &quot;WHERE { GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;	&lt;%s&gt; a rpo:DifferenceGroup ; %n&quot;
+						+ &quot;		rpo:hasDifference ?blankDifference . %n&quot;
+						+ &quot;	?blankDifference a rpo:Difference ; %n&quot;
+						+ &quot;		rpo:hasTriple ?triple . %n&quot;
+						+ &quot;	?triple rdf:subject ?s . %n&quot;
+						+ &quot;	?triple rdf:predicate ?p . %n&quot;
+						+ &quot;	?triple rdf:object ?o . %n&quot;
+						+ &quot;} }&quot;, graphNameDifferenceTripleModel, currentDifferencGroupURI);
+				
+				// Iterate over all differences (triples)
+<span class="fc" id="L764">				ResultSet resultSetDifferences = TripleStoreInterfaceSingleton.get().executeSelectQuery(queryDifference);</span>
+<span class="fc bfc" id="L765" title="All 2 branches covered.">				while (resultSetDifferences.hasNext()) {</span>
+<span class="fc" id="L766">					QuerySolution qsCurrentDifference = resultSetDifferences.next();</span>
+					
+<span class="fc" id="L768">					String subject = &quot;&lt;&quot; + qsCurrentDifference.getResource(&quot;?s&quot;).toString() + &quot;&gt;&quot;;</span>
+<span class="fc" id="L769">					String predicate = &quot;&lt;&quot; + qsCurrentDifference.getResource(&quot;?p&quot;).toString() + &quot;&gt;&quot;;</span>
+	
+					// Differ between literal and resource
+<span class="fc" id="L772">					String object = &quot;&quot;;</span>
+<span class="pc bpc" id="L773" title="1 of 2 branches missed.">					if (qsCurrentDifference.get(&quot;?o&quot;).isLiteral()) {</span>
+<span class="fc" id="L774">						object = &quot;\&quot;&quot; + qsCurrentDifference.getLiteral(&quot;?o&quot;).toString() + &quot;\&quot;&quot;;</span>
+					} else {
+<span class="nc" id="L776">						object = &quot;&lt;&quot; + qsCurrentDifference.getResource(&quot;?o&quot;).toString() + &quot;&gt;&quot;;</span>
+					}
+					
+<span class="pc bpc" id="L779" title="2 of 8 branches missed.">					if (	type.equals(MergeQueryTypeEnum.AUTO) || </span>
+							type.equals(MergeQueryTypeEnum.COMMON) || 
+							(type.equals(MergeQueryTypeEnum.WITH) &amp;&amp; !currentDifferencGroupConflict) ) {
+						// MERGE AUTO or common MERGE query
+<span class="fc bfc" id="L783" title="All 2 branches covered.">						if (currentDifferencGroupAutomaticResolutionState.equals(SDDTripleStateEnum.ADDED.getSddRepresentation())) {</span>
+							// Triple should be added
+<span class="fc" id="L785">							triplesToAdd += subject + &quot; &quot; + predicate + &quot; &quot; + object + &quot; . \n&quot;;</span>
+						} else {
+							// Triple should be deleted
+<span class="fc" id="L788">							triplesToDelete += subject + &quot; &quot; + predicate + &quot; &quot; + object + &quot; . \n&quot;;</span>
+						}
+					} else {
+						// MERGE WITH query - conflicting triple
+<span class="fc" id="L792">						Model model = JenaModelManagement.readNTripleStringToJenaModel(commit.triples);</span>
+						// Create ASK query which will check if the model contains the specified triple
+<span class="fc" id="L794">						String queryAsk = String.format(</span>
+								  &quot;ASK { %n&quot;
+								+ &quot; %s %s %s %n&quot;
+								+ &quot;}&quot;, subject, predicate, object);
+<span class="fc" id="L798">						Query query = QueryFactory.create(queryAsk);</span>
+<span class="fc" id="L799">						QueryExecution qe = QueryExecutionFactory.create(query, model);</span>
+<span class="fc" id="L800">						boolean resultAsk = qe.execAsk();</span>
+<span class="fc" id="L801">						qe.close();</span>
+<span class="fc" id="L802">						model.close();</span>
+<span class="pc bpc" id="L803" title="1 of 2 branches missed.">						if (resultAsk) {</span>
+							// Model contains the specified triple
+							// Triple should be added
+<span class="fc" id="L806">							triplesToAdd += subject + &quot; &quot; + predicate + &quot; &quot; + object + &quot; . \n&quot;;</span>
+						} else {
+							// Triple should be deleted
+<span class="nc" id="L809">							triplesToDelete += subject + &quot; &quot; + predicate + &quot; &quot; + object + &quot; . \n&quot;;</span>
+						}
+					}
+<span class="fc" id="L812">				}</span>
+				// Update the merged graph
+				// Insert triplesToAdd
+<span class="fc" id="L815">				RevisionManagement.executeINSERT(graphNameOfMerged, triplesToAdd);</span>
+				// Delete triplesToDelete
+<span class="fc" id="L817">				RevisionManagement.executeDELETE(graphNameOfMerged, triplesToDelete);</span>
+<span class="fc" id="L818">			}</span>
+		}
+		
+		// Calculate the add and delete sets
+		
+		// Get all added triples (concatenate all triples which are in MERGED but not in A and all triples which are in MERGED but not in B)
+<span class="fc" id="L824">		String queryAddedTriples = String.format(</span>
+				  &quot;CONSTRUCT {?s ?p ?o} %n&quot;
+				+ &quot;WHERE { %n&quot;
+				+ &quot;	GRAPH &lt;%s&gt; { ?s ?p ?o } %n&quot;
+				+ &quot;	FILTER NOT EXISTS { &quot;
+				+ &quot;		GRAPH &lt;%s&gt; { ?s ?p ?o } %n&quot;
+				+ &quot;	} %n&quot;
+				+ &quot;}&quot;, graphNameOfMerged, graphNameOfBranchA);
+		
+<span class="fc" id="L833">		String addedTriples = TripleStoreInterfaceSingleton.get().executeConstructQuery(queryAddedTriples, FileUtils.langNTriple);</span>
+		
+<span class="fc" id="L835">		queryAddedTriples = String.format(</span>
+				  &quot;CONSTRUCT {?s ?p ?o} %n&quot;
+				+ &quot;WHERE { %n&quot;
+				+ &quot;	GRAPH &lt;%s&gt; { ?s ?p ?o } %n&quot;
+				+ &quot;	FILTER NOT EXISTS { %n&quot;
+				+ &quot;		GRAPH &lt;%s&gt; { ?s ?p ?o } %n&quot;
+				+ &quot;	} %n&quot;
+				+ &quot;}&quot;, graphNameOfMerged, graphNameOfBranchB);
+
+<span class="fc" id="L844">		addedTriples += TripleStoreInterfaceSingleton.get().executeConstructQuery(queryAddedTriples, FileUtils.langNTriple);</span>
+		
+		// Get all removed triples (concatenate all triples which are in A but not in MERGED and all triples which are in B but not in MERGED)
+<span class="fc" id="L847">		String queryRemovedTriples = String.format(</span>
+				  &quot;CONSTRUCT {?s ?p ?o} %n&quot;
+				+ &quot;WHERE { %n&quot;
+				+ &quot;	GRAPH &lt;%s&gt; { ?s ?p ?o } %n&quot;
+				+ &quot;	FILTER NOT EXISTS { %n&quot;
+				+ &quot;		GRAPH &lt;%s&gt; { ?s ?p ?o } %n&quot;
+				+ &quot;	} %n&quot;
+				+ &quot;}&quot;, graphNameOfBranchA, graphNameOfMerged);
+		
+<span class="fc" id="L856">		String removedTriples = TripleStoreInterfaceSingleton.get().executeConstructQuery(queryRemovedTriples, FileUtils.langNTriple);</span>
+		
+<span class="fc" id="L858">		queryRemovedTriples = String.format(</span>
+				  &quot;CONSTRUCT {?s ?p ?o} %n&quot;
+				+ &quot;WHERE { %n&quot;
+				+ &quot;	GRAPH &lt;%s&gt; { ?s ?p ?o } %n&quot;
+				+ &quot;	FILTER NOT EXISTS { %n&quot;
+				+ &quot;		GRAPH &lt;%s&gt; { ?s ?p ?o } %n&quot;
+				+ &quot;	} %n&quot;
+				+ &quot;}&quot;, graphNameOfBranchB, graphNameOfMerged);
+		
+<span class="fc" id="L867">		removedTriples += TripleStoreInterfaceSingleton.get().executeConstructQuery(queryRemovedTriples, FileUtils.langNTriple);</span>
+
+		// Create list with the 2 predecessors - the order is important - fist item will specify the branch were the new merged revision will be created
+<span class="fc" id="L870">		ArrayList&lt;String&gt; usedRevisionNumbers = new ArrayList&lt;String&gt;();</span>
+<span class="fc" id="L871">		usedRevisionNumbers.add(commit.branchNameB);</span>
+<span class="fc" id="L872">		usedRevisionNumbers.add(commit.branchNameA);</span>
+<span class="fc" id="L873">		return RevisionManagement.createNewRevision(commit.graphName, addedTriples, removedTriples, commit.user, commit.message, usedRevisionNumbers);</span>
+	}
+	
+	/**
+	 * Create a rebase merged revision.
+	 * 
+	 * @param graphName the graph name
+	 * @param branchNameA the name of branch A
+	 * @param branchNameB the name of branch B
+	 * @param user the user
+	 * @param commitMessage the commit message
+	 * @param graphNameDifferenceTripleModel the graph name of the difference triple model
+	 * @param graphNameRevisionProgressA the graph name of the revisions progress A
+	 * @param uriA the URI A
+	 * @param graphNameRevisionProgressB the graph name of the revisions progress B
+	 * @param uriB the URI B
+	 * @param uriSDD the URI of the SDD
+	 * @param type the merge query type
+	 * @param triples the triples which are belonging to the current merge query in N-Triple serialization
+	 * @return new revision number
+	 * @throws InternalErrorException 
+	 */
+	public static ArrayList&lt;String&gt; createRebaseMergedTripleList(final R43plesMergeCommit commit, String graphNameDifferenceTripleModel, String graphNameRevisionProgressA, String uriA, String graphNameRevisionProgressB, String uriB, String uriSDD, MergeQueryTypeEnum type) throws InternalErrorException {
+		
+<span class="fc" id="L897">		RevisionGraph graph = new RevisionGraph(commit.graphName);</span>
+		
+		//set the triple list
+<span class="fc" id="L900">		ArrayList&lt;String&gt; list = new ArrayList&lt;String&gt;();</span>
+		
+		// Create an empty temporary graph which will contain the merged full content
+<span class="fc" id="L903">		String graphNameOfMerged = commit.graphName + &quot;-RM-MERGED-TEMP&quot;;</span>
+<span class="fc" id="L904">		TripleStoreInterfaceSingleton.get().executeCreateGraph(graphNameOfMerged);</span>
+		
+		// Get the full graph name of branch A
+<span class="fc" id="L907">		String graphNameOfBranchA = graph.getReferenceGraph(commit.branchNameA);</span>
+		// Get the full graph name of branch B
+<span class="fc" id="L909">		String graphNameOfBranchB = graph.getReferenceGraph(commit.branchNameB);</span>
+		
+<span class="fc" id="L911">		logger.info(&quot;the triples: &quot;+ commit.triples);</span>
+<span class="pc bpc" id="L912" title="1 of 2 branches missed.">		if (type.equals(MergeQueryTypeEnum.MANUAL)) {</span>
+			// Manual merge query
+<span class="nc" id="L914">			RevisionManagement.executeINSERT(graphNameOfMerged, commit.triples);</span>
+		} else {	
+			// Copy graph B to temporary merged graph
+<span class="fc" id="L917">			String queryCopy = String.format(&quot;COPY &lt;%s&gt; TO &lt;%s&gt;&quot;, graphNameOfBranchB, graphNameOfMerged);</span>
+<span class="fc" id="L918">			TripleStoreInterfaceSingleton.get().executeUpdateQuery(queryCopy);</span>
+			
+			// Get the triples from branch A which should be added to/removed from the merged revision
+<span class="fc" id="L921">			String triplesToAdd = &quot;&quot;;</span>
+<span class="fc" id="L922">			String triplesToDelete = &quot;&quot;;</span>
+			
+			// Get all difference groups
+<span class="fc" id="L925">			String queryDifferenceGroup = prefixes + String.format(</span>
+					  &quot;SELECT ?differenceCombinationURI ?automaticResolutionState ?tripleStateA ?tripleStateB ?conflict %n&quot;
+					+ &quot;WHERE { GRAPH &lt;%s&gt; { %n&quot;
+					+ &quot;	?differenceCombinationURI a rpo:DifferenceGroup ; %n&quot;
+					+ &quot;		sddo:automaticResolutionState ?automaticResolutionState ; %n&quot;
+					+ &quot;		sddo:hasTripleStateA ?tripleStateA ; %n&quot;
+					+ &quot;		sddo:hasTripleStateB ?tripleStateB ; %n&quot;
+					+ &quot;		sddo:isConflicting ?conflict . %n&quot;
+					+ &quot;} }&quot;, graphNameDifferenceTripleModel);
+	
+			// Iterate over all difference groups
+<span class="fc" id="L936">			ResultSet resultSetDifferenceGroups = TripleStoreInterfaceSingleton.get().executeSelectQuery(queryDifferenceGroup);</span>
+<span class="fc bfc" id="L937" title="All 2 branches covered.">			while (resultSetDifferenceGroups.hasNext()) {</span>
+<span class="fc" id="L938">				QuerySolution qsCurrentDifferenceGroup = resultSetDifferenceGroups.next();</span>
+	
+<span class="fc" id="L940">				String currentDifferencGroupURI = qsCurrentDifferenceGroup.getResource(&quot;?differenceCombinationURI&quot;).toString();</span>
+<span class="fc" id="L941">				String currentDifferencGroupAutomaticResolutionState = qsCurrentDifferenceGroup.getResource(&quot;?automaticResolutionState&quot;).toString();</span>
+//				Currently not needed
+//				String currentDifferencGroupTripleStateA = qsCurrentDifferenceGroup.getResource(&quot;?tripleStateA&quot;).toString();
+//				String currentDifferencGroupTripleStateB = qsCurrentDifferenceGroup.getResource(&quot;?tripleStateB&quot;).toString();
+<span class="fc" id="L945">				boolean currentDifferencGroupConflict = qsCurrentDifferenceGroup.getLiteral(&quot;?conflict&quot;).getBoolean();</span>
+				
+				// Get all differences (triples) of current difference group
+<span class="fc" id="L948">				String queryDifference = prefixes + String.format(</span>
+						  &quot;SELECT ?s ?p ?o %n&quot;
+						+ &quot;WHERE { GRAPH &lt;%s&gt; { %n&quot;
+						+ &quot;	&lt;%s&gt; a rpo:DifferenceGroup ; %n&quot;
+						+ &quot;		rpo:hasDifference ?blankDifference . %n&quot;
+						+ &quot;	?blankDifference a rpo:Difference ; %n&quot;
+						+ &quot;		rpo:hasTriple ?triple . %n&quot;
+						+ &quot;	?triple rdf:subject ?s . %n&quot;
+						+ &quot;	?triple rdf:predicate ?p . %n&quot;
+						+ &quot;	?triple rdf:object ?o . %n&quot;
+						+ &quot;} }&quot;, graphNameDifferenceTripleModel, currentDifferencGroupURI);
+				
+				// Iterate over all differences (triples)
+<span class="fc" id="L961">				ResultSet resultSetDifferences = TripleStoreInterfaceSingleton.get().executeSelectQuery(queryDifference);</span>
+<span class="fc bfc" id="L962" title="All 2 branches covered.">				while (resultSetDifferences.hasNext()) {</span>
+<span class="fc" id="L963">					QuerySolution qsCurrentDifference = resultSetDifferences.next();</span>
+					
+<span class="fc" id="L965">					String subject = &quot;&lt;&quot; + qsCurrentDifference.getResource(&quot;?s&quot;).toString() + &quot;&gt;&quot;;</span>
+<span class="fc" id="L966">					String predicate = &quot;&lt;&quot; + qsCurrentDifference.getResource(&quot;?p&quot;).toString() + &quot;&gt;&quot;;</span>
+	
+					// Differ between literal and resource
+<span class="fc" id="L969">					String object = &quot;&quot;;</span>
+<span class="pc bpc" id="L970" title="1 of 2 branches missed.">					if (qsCurrentDifference.get(&quot;?o&quot;).isLiteral()) {</span>
+<span class="fc" id="L971">						object = &quot;\&quot;&quot; + qsCurrentDifference.getLiteral(&quot;?o&quot;).toString() + &quot;\&quot;&quot;;</span>
+					} else {
+<span class="nc" id="L973">						object = &quot;&lt;&quot; + qsCurrentDifference.getResource(&quot;?o&quot;).toString() + &quot;&gt;&quot;;</span>
+					}
+					
+<span class="pc bpc" id="L976" title="2 of 8 branches missed.">					if (	type.equals(MergeQueryTypeEnum.AUTO) || </span>
+							type.equals(MergeQueryTypeEnum.COMMON) || 
+							(type.equals(MergeQueryTypeEnum.WITH) &amp;&amp; !currentDifferencGroupConflict) ) {
+						
+						// MERGE AUTO or common MERGE query
+<span class="fc bfc" id="L981" title="All 2 branches covered.">						if (currentDifferencGroupAutomaticResolutionState.equals(SDDTripleStateEnum.ADDED.getSddRepresentation())) {</span>
+							// Triple should be added
+<span class="fc" id="L983">							triplesToAdd += subject + &quot; &quot; + predicate + &quot; &quot; + object + &quot; . \n&quot;;</span>
+						} else {
+							// Triple should be deleted
+<span class="fc" id="L986">							triplesToDelete += subject + &quot; &quot; + predicate + &quot; &quot; + object + &quot; . \n&quot;;</span>
+						}
+					}else {
+						
+						// MERGE WITH query - conflicting triple
+<span class="fc" id="L991">						Model model = JenaModelManagement.readNTripleStringToJenaModel(commit.triples);</span>
+						// Create ASK query which will check if the model contains the specified triple
+<span class="fc" id="L993">						String queryAsk = String.format(</span>
+								  &quot;ASK { %n&quot;
+								+ &quot; %s %s %s %n&quot;
+								+ &quot;}&quot;, subject, predicate, object);
+<span class="fc" id="L997">						Query query = QueryFactory.create(queryAsk);</span>
+<span class="fc" id="L998">						QueryExecution qe = QueryExecutionFactory.create(query, model);</span>
+<span class="fc" id="L999">						boolean resultAsk = qe.execAsk();</span>
+<span class="fc" id="L1000">						qe.close();</span>
+<span class="fc" id="L1001">						model.close();</span>
+<span class="pc bpc" id="L1002" title="1 of 2 branches missed.">						if (resultAsk) {</span>
+							// Model contains the specified triple
+							// Triple should be added
+<span class="fc" id="L1005">							triplesToAdd += subject + &quot; &quot; + predicate + &quot; &quot; + object + &quot; . \n&quot;;</span>
+						} else {
+							// Triple should be deleted
+<span class="nc" id="L1008">							triplesToDelete += subject + &quot; &quot; + predicate + &quot; &quot; + object + &quot; . \n&quot;;</span>
+						}
+					}
+<span class="fc" id="L1011">				}</span>
+				// Update the merged graph
+				// Insert triplesToAdd
+<span class="fc" id="L1014">				RevisionManagement.executeINSERT(graphNameOfMerged, triplesToAdd);</span>
+				// Delete triplesToDelete
+<span class="fc" id="L1016">				RevisionManagement.executeDELETE(graphNameOfMerged, triplesToDelete);</span>
+<span class="fc" id="L1017">			}</span>
+		}
+		
+		// Calculate the add and delete sets
+		
+		// Get all added triples (concatenate all triples which are in MERGED but not in A and all triples which are in MERGED but not in B)
+<span class="fc" id="L1023">		String queryAddedTriples = String.format(</span>
+				  &quot;CONSTRUCT {?s ?p ?o} %n&quot;
+				+ &quot;WHERE { %n&quot;
+				+ &quot;	GRAPH &lt;%s&gt; { ?s ?p ?o } %n&quot;
+				+ &quot;	FILTER NOT EXISTS { %n&quot;
+				+ &quot;		GRAPH &lt;%s&gt; { ?s ?p ?o } %n&quot;
+				+ &quot;	} %n&quot;
+				+ &quot;}&quot;, graphNameOfMerged, graphNameOfBranchA);
+		
+<span class="fc" id="L1032">		String addedTriples = TripleStoreInterfaceSingleton.get().executeConstructQuery(queryAddedTriples, FileUtils.langNTriple);</span>
+		
+<span class="fc" id="L1034">		queryAddedTriples = String.format(</span>
+				  &quot;CONSTRUCT {?s ?p ?o} %n&quot;
+				+ &quot;WHERE { %n&quot;
+				+ &quot;	GRAPH &lt;%s&gt; { ?s ?p ?o } %n&quot;
+				+ &quot;	FILTER NOT EXISTS { %n&quot;
+				+ &quot;		GRAPH &lt;%s&gt; { ?s ?p ?o } %n&quot;
+				+ &quot;	} %n&quot;
+				+ &quot;}&quot;, graphNameOfMerged, graphNameOfBranchB);
+
+<span class="fc" id="L1043">		addedTriples += TripleStoreInterfaceSingleton.get().executeConstructQuery(queryAddedTriples, FileUtils.langNTriple);</span>
+		
+		// Get all removed triples (concatenate all triples which are in A but not in MERGED and all triples which are in B but not in MERGED)
+<span class="fc" id="L1046">		String queryRemovedTriples = String.format(</span>
+				  &quot;CONSTRUCT {?s ?p ?o} %n&quot;
+				+ &quot;WHERE { %n&quot;
+				+ &quot;	GRAPH &lt;%s&gt; { ?s ?p ?o } %n&quot;
+				+ &quot;	FILTER NOT EXISTS { %n&quot;
+				+ &quot;		GRAPH &lt;%s&gt; { ?s ?p ?o } %n&quot;
+				+ &quot;	} %n&quot;
+				+ &quot;}&quot;, graphNameOfBranchA, graphNameOfMerged);
+		
+<span class="fc" id="L1055">		String removedTriples = TripleStoreInterfaceSingleton.get().executeConstructQuery(queryRemovedTriples, FileUtils.langNTriple);</span>
+		
+<span class="fc" id="L1057">		queryRemovedTriples = String.format(</span>
+				  &quot;CONSTRUCT {?s ?p ?o} %n&quot;
+				+ &quot;WHERE { %n&quot;
+				+ &quot;	GRAPH &lt;%s&gt; { ?s ?p ?o } %n&quot;
+				+ &quot;	FILTER NOT EXISTS { %n&quot;
+				+ &quot;		GRAPH &lt;%s&gt; { ?s ?p ?o } %n&quot;
+				+ &quot;	} %n&quot;
+				+ &quot;}&quot;, graphNameOfBranchB, graphNameOfMerged);
+		
+<span class="fc" id="L1066">		removedTriples += TripleStoreInterfaceSingleton.get().executeConstructQuery(queryRemovedTriples, FileUtils.langNTriple);</span>
+		
+		// Add the string to the result list
+<span class="fc" id="L1069">		list.add(String.format(addedTriples));</span>
+<span class="fc" id="L1070">		list.add(String.format(removedTriples));</span>
+				
+<span class="fc" id="L1072">		return list;</span>
+	}
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HighLevelChangeTableModel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.merging.model.structure</a> &gt; <span class="el_source">HighLevelChangeTableModel.java</span></div><h1>HighLevelChangeTableModel.java</h1><pre class="source lang-java linenums">package de.tud.plt.r43ples.merging.model.structure;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**store all renaming information in HighLevelChangeTableModel
+ * read HighLevelChangeModel and create HighLevelChangeTableModel*/
+
+public class HighLevelChangeTableModel {
+	/**currentTripleId of Triple*/
+<span class="nc" id="L13">	private Integer currentTripleId = 1;</span>
+	private List&lt;HighLevelChangeTableRow&gt; tripleRowList;
+	private Map&lt;String, HighLevelChangeTableRow&gt; manuellTriple;
+	
+<span class="nc" id="L17">	public HighLevelChangeTableModel(){</span>
+<span class="nc" id="L18">		this.setTripleRowList(new ArrayList&lt;HighLevelChangeTableRow&gt;());</span>
+<span class="nc" id="L19">		this.setManuellTriple(new HashMap&lt;String, HighLevelChangeTableRow&gt;());	</span>
+<span class="nc" id="L20">	}</span>
+	
+	public void readTableRow(HighLevelChangeTableRow tableRow){
+<span class="nc" id="L23">		tableRow.setTripleId(currentTripleId.toString());</span>
+<span class="nc" id="L24">		this.tripleRowList.add(tableRow);</span>
+<span class="nc" id="L25">		this.manuellTriple.put(tableRow.getTripleId(), tableRow);</span>
+<span class="nc" id="L26">		currentTripleId ++;</span>
+<span class="nc" id="L27">	}</span>
+	
+	
+	public List&lt;HighLevelChangeTableRow&gt; getTripleRowList() {
+<span class="nc" id="L31">		return tripleRowList;</span>
+	}
+	public void setTripleRowList(List&lt;HighLevelChangeTableRow&gt; tripleRowList) {
+<span class="nc" id="L34">		this.tripleRowList = tripleRowList;</span>
+<span class="nc" id="L35">	}</span>
+	public Map&lt;String, HighLevelChangeTableRow&gt; getManuellTriple() {
+<span class="nc" id="L37">		return manuellTriple;</span>
+	}
+	public void setManuellTriple(HashMap&lt;String, HighLevelChangeTableRow&gt; manuellTriple) {
+<span class="nc" id="L40">		this.manuellTriple = manuellTriple;</span>
+<span class="nc" id="L41">	}</span>
+	
+	public void clear(){
+<span class="nc" id="L44">		this.currentTripleId = 1;</span>
+<span class="nc" id="L45">		this.tripleRowList.clear();</span>
+<span class="nc" id="L46">		this.manuellTriple.clear();</span>
+<span class="nc" id="L47">	}</span>
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

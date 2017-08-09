@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FastForwardControl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.merging</a> &gt; <span class="el_source">FastForwardControl.java</span></div><h1>FastForwardControl.java</h1><pre class="source lang-java linenums">package de.tud.plt.r43ples.merging;
+
+import de.tud.plt.r43ples.exception.InternalErrorException;
+import de.tud.plt.r43ples.management.Config;
+import de.tud.plt.r43ples.management.RevisionGraph;
+import de.tud.plt.r43ples.management.RevisionManagement;
+import de.tud.plt.r43ples.triplestoreInterface.TripleStoreInterfaceSingleton;
+
+<span class="nc" id="L9">public class FastForwardControl {</span>
+
+	/**
+	 * Fast forwards branch A to branch B
+	 * 
+	 * Note: branch B remains the same, only branch A is updated
+	 * 
+	 * @param revisionGraph URI of revision graph where fast forward should take place
+	 * @param branchNameA name of branch A which should be forwarded
+	 * @param branchNameB name of branch which should be forwarded to
+	 * @param user	username which is responsible for the commit
+	 * @param dateTime timestamp
+	 * @param message commit message for fast forward
+	 * 
+	 * @return true, if fast forward was successful
+	 * @throws InternalErrorException 
+	 * 
+	 */
+	public static boolean performFastForward(final RevisionGraph graph, final String branchNameA, final String branchNameB,
+			final String user, final String dateTime, final String message) throws InternalErrorException{
+<span class="fc" id="L29">		String revisionGraph = graph.getRevisionGraphUri();</span>
+<span class="pc bpc" id="L30" title="1 of 2 branches missed.">		if (!FastForwardControl.fastForwardCheck(graph, branchNameA, branchNameB)) {</span>
+<span class="nc" id="L31">			return false;</span>
+		}
+<span class="fc" id="L33">		String branchUriA = graph.getBranchUri(branchNameA);</span>
+<span class="fc" id="L34">		String branchUriB = graph.getBranchUri(branchNameB);</span>
+		
+<span class="fc" id="L36">		String fullGraphUriA = graph.getFullGraphUri(branchUriA);</span>
+<span class="fc" id="L37">		String fullGraphUriB = graph.getFullGraphUri(branchUriB);</span>
+	
+<span class="fc" id="L39">		String revisionUriA = graph.getRevisionUri(branchNameA);</span>
+<span class="fc" id="L40">		String revisionUriB = graph.getRevisionUri(branchNameB);</span>
+		
+<span class="fc" id="L42">		RevisionManagement.moveBranchReference(revisionGraph, branchUriA, revisionUriA, revisionUriB);</span>
+		
+<span class="fc" id="L44">		String commitUri = revisionGraph+&quot;-ff-commit-&quot;+branchNameA+&quot;-&quot;+branchNameB;</span>
+<span class="fc" id="L45">		String query = Config.prefixes + String.format(&quot;&quot;</span>
+				+ &quot;INSERT DATA { GRAPH &lt;%s&gt; { &quot;
+				+ &quot;  &lt;%s&gt; a rmo:FastForwardCommit;&quot;
+				+ &quot;     prov:used &lt;%s&gt;, &lt;%s&gt;, &lt;%s&gt;;&quot;
+				+ &quot;     prov:wasAssociatedWith &lt;%s&gt;;&quot;
+				+ &quot;     prov:atTime \&quot;%s\&quot;^^xsd:dateTime; &quot;
+				+ &quot;     dc-terms:title \&quot;%s\&quot;. &quot;
+				+ &quot;} }&quot;,
+				revisionGraph, commitUri, branchUriA, revisionUriA, revisionUriB, user, dateTime, message);
+<span class="fc" id="L54">		TripleStoreInterfaceSingleton.get().executeUpdateQuery(query);</span>
+<span class="fc" id="L55">		RevisionManagement.updateBelongsTo(revisionGraph, branchUriA, revisionUriA, revisionUriB);	</span>
+<span class="fc" id="L56">		RevisionManagement.fullGraphCopy(fullGraphUriB, fullGraphUriA);</span>
+<span class="fc" id="L57">		return true;</span>
+	}
+	
+	
+	/**check the condition for fast forward strategy
+	 * @param revisionGraph	name of named graph
+	 * @param branch1	name of branch1
+	 * @param branch2	name of branch2
+	 */
+	
+	public static boolean fastForwardCheck(RevisionGraph revisionGraph, String branch1 , String branch2) {
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">		if(branch1.equals(branch2)) {</span>
+<span class="nc" id="L69">			return false;</span>
+		}
+		
+		try {
+			//get last revision of each branch
+<span class="fc" id="L74">			String revisionUriA = revisionGraph.getRevisionUri(branch1);</span>
+<span class="fc" id="L75">			String revisionUriB = revisionGraph.getRevisionUri(branch2);</span>
+		
+<span class="fc" id="L77">			String query = Config.prefixes</span>
+				+ String.format(&quot;ASK { GRAPH &lt;%s&gt; { &quot;
+						+ &quot;&lt;%s&gt; prov:wasDerivedFrom+ &lt;%s&gt; .&quot;
+						+ &quot; }} &quot;,
+						revisionGraph.getRevisionGraphUri(), revisionUriB, revisionUriA);
+			
+<span class="fc" id="L83">			return TripleStoreInterfaceSingleton.get().executeAskQuery(query);</span>
+		}
+<span class="nc" id="L85">		catch (InternalErrorException e){</span>
+<span class="nc" id="L86">			return false;</span>
+		}
+	}
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

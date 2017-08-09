@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>R43plesCommit.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.management</a> &gt; <span class="el_source">R43plesCommit.java</span></div><h1>R43plesCommit.java</h1><pre class="source lang-java linenums">package de.tud.plt.r43ples.management;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class R43plesCommit extends R43plesRequest{
+	
+<span class="fc" id="L8">	private final int patternModifier = Pattern.DOTALL + Pattern.MULTILINE + Pattern.CASE_INSENSITIVE;</span>
+<span class="fc" id="L9">	private final Pattern patternUser = Pattern.compile(</span>
+			&quot;USER\\s*\&quot;(?&lt;user&gt;[^\&quot;]*)\&quot;&quot;,
+			patternModifier);
+<span class="fc" id="L12">	private final Pattern patternCommitMessage = Pattern.compile(</span>
+			&quot;MESSAGE\\s*\&quot;(?&lt;message&gt;[^\&quot;]*)\&quot;&quot;, 
+			patternModifier);
+
+	public String user;
+	public String message;
+	
+	public R43plesCommit(final R43plesRequest request){
+<span class="fc" id="L20">		super(request.query_r43ples, request.format);</span>
+<span class="fc" id="L21">		this.query_sparql = request.query_sparql;</span>
+<span class="fc" id="L22">		this.extractUser();</span>
+<span class="fc" id="L23">		this.extractMessage();</span>
+<span class="fc" id="L24">	}</span>
+	
+	private String extractUser() {
+<span class="fc" id="L27">		Matcher userMatcher = patternUser.matcher(this.query_sparql);</span>
+<span class="pc bpc" id="L28" title="1 of 2 branches missed.">		if (userMatcher.find()) {</span>
+<span class="fc" id="L29">			this.user = userMatcher.group(&quot;user&quot;);</span>
+<span class="fc" id="L30">			this.query_sparql = userMatcher.replaceAll(&quot;&quot;);</span>
+		}
+<span class="fc" id="L32">		return this.user;</span>
+	}
+
+	private String extractMessage() {
+<span class="fc" id="L36">		Matcher messageMatcher = patternCommitMessage.matcher(this.query_sparql);</span>
+<span class="pc bpc" id="L37" title="1 of 2 branches missed.">		if (messageMatcher.find()) {</span>
+<span class="fc" id="L38">			this.message = messageMatcher.group(&quot;message&quot;);</span>
+<span class="fc" id="L39">			this.query_sparql = messageMatcher.replaceAll(&quot;&quot;);</span>
+		}	
+<span class="fc" id="L41">		return this.message;</span>
+	}
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

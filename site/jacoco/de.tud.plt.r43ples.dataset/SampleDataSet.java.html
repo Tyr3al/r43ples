@@ -1,0 +1,560 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SampleDataSet.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.dataset</a> &gt; <span class="el_source">SampleDataSet.java</span></div><h1>SampleDataSet.java</h1><pre class="source lang-java linenums">package de.tud.plt.r43ples.dataset;
+
+import java.io.IOException;
+import java.util.ArrayList;
+
+import org.apache.log4j.Logger;
+
+import de.tud.plt.r43ples.exception.InternalErrorException;
+import de.tud.plt.r43ples.management.ResourceManagement;
+import de.tud.plt.r43ples.management.RevisionGraph;
+import de.tud.plt.r43ples.management.RevisionManagement;
+
+/**
+ * 
+ * @author Stephan Hensel
+ * @author Markus Graube
+ *
+ */
+<span class="nc" id="L19">public class SampleDataSet {</span>
+
+	/** The logger. */
+<span class="fc" id="L22">	private static Logger logger = Logger.getLogger(SampleDataSet.class);</span>
+	
+	/** The user. **/
+	private static final String user = &quot;butler&quot;;
+
+	public static DataSetGenerationResult createSampleDataset1() throws InternalErrorException  {
+<span class="fc" id="L28">		DataSetGenerationResult result = new DataSetGenerationResult();	</span>
+<span class="fc" id="L29">		String graphName = &quot;http://test.com/r43ples-dataset-1&quot;;</span>
+<span class="fc" id="L30">		result.graphName = graphName;</span>
+<span class="fc" id="L31">		RevisionGraph graph = new RevisionGraph(graphName);</span>
+<span class="fc" id="L32">		graph.purgeRevisionInformation();</span>
+<span class="fc" id="L33">		String revisionNumber0 = RevisionManagement.putGraphUnderVersionControl(graphName, &quot;2016-01-01T14:51:37.011&quot;);</span>
+<span class="fc" id="L34">		result.revisions.put(&quot;master-0&quot;, revisionNumber0);</span>
+
+<span class="fc" id="L36">		String revisionNumber1 = RevisionManagement.createNewRevision(graphName,</span>
+				ResourceManagement.getContentFromResource(&quot;samples/dataset1/added-1.nt&quot;),
+				ResourceManagement.getContentFromResource(&quot;samples/dataset1/removed-1.nt&quot;), user,
+				&quot;2016-01-01T14:51:37.012&quot;,
+				&quot;test commit message 1&quot;, revisionNumber0);
+<span class="fc" id="L41">		result.revisions.put(&quot;master-1&quot;, revisionNumber1);</span>
+		
+<span class="fc" id="L43">		String revisionNumber2 = RevisionManagement.createNewRevision(graphName,</span>
+				ResourceManagement.getContentFromResource(&quot;samples/dataset1/added-2.nt&quot;),
+				ResourceManagement.getContentFromResource(&quot;samples/dataset1/removed-2.nt&quot;), user,
+				&quot;2016-01-02T09:06:52.521&quot;,
+				&quot;test commit message 2&quot;, revisionNumber1);
+<span class="fc" id="L48">		result.revisions.put(&quot;master-2&quot;, revisionNumber2);</span>
+		
+<span class="fc" id="L50">		String revisionNumber3 = RevisionManagement.createNewRevision(graphName,</span>
+				ResourceManagement.getContentFromResource(&quot;samples/dataset1/added-3.nt&quot;),
+				ResourceManagement.getContentFromResource(&quot;samples/dataset1/removed-3.nt&quot;), user,
+				&quot;2016-01-08T14:07:59.739&quot;,
+				&quot;test commit message 3&quot;, revisionNumber2);
+<span class="fc" id="L55">		result.revisions.put(&quot;master-3&quot;, revisionNumber3);</span>
+		
+<span class="fc" id="L57">		String revisionNumber4 = RevisionManagement.createNewRevision(graphName,</span>
+				ResourceManagement.getContentFromResource(&quot;samples/dataset1/added-4.nt&quot;),
+				ResourceManagement.getContentFromResource(&quot;samples/dataset1/removed-4.nt&quot;), user,
+				&quot;2016-01-10T08:12:23.018&quot;,
+				&quot;test commit message 4&quot;, revisionNumber3);
+<span class="fc" id="L62">		result.revisions.put(&quot;master-4&quot;, revisionNumber4);</span>
+		
+<span class="fc" id="L64">		String revisionNumber5 = RevisionManagement.createNewRevision(graphName,</span>
+				ResourceManagement.getContentFromResource(&quot;samples/dataset1/added-5.nt&quot;),
+				ResourceManagement.getContentFromResource(&quot;samples/dataset1/removed-5.nt&quot;), user,
+				&quot;2016-01-21T23:07:52.104&quot;,
+				&quot;test commit message 5&quot;, revisionNumber4);
+<span class="fc" id="L69">		result.revisions.put(&quot;master-5&quot;, revisionNumber5);</span>
+<span class="fc" id="L70">		return result;</span>
+	}
+
+	public static DataSetGenerationResult createSampleDataset2() throws InternalErrorException {
+<span class="fc" id="L74">		DataSetGenerationResult result = new DataSetGenerationResult();	</span>
+<span class="fc" id="L75">		String graphName = &quot;http://test.com/r43ples-dataset-2&quot;;</span>
+<span class="fc" id="L76">		result.graphName = graphName;</span>
+<span class="fc" id="L77">		RevisionGraph graph = new RevisionGraph(graphName);</span>
+<span class="fc" id="L78">		graph.purgeRevisionInformation();</span>
+<span class="fc" id="L79">		String revisionNumber0 = RevisionManagement.putGraphUnderVersionControl(graphName);</span>
+<span class="fc" id="L80">		result.revisions.put(&quot;master-0&quot;, revisionNumber0);</span>
+
+<span class="fc" id="L82">		String revisionNumber1 = RevisionManagement.createNewRevision(graphName,</span>
+				ResourceManagement.getContentFromResource(&quot;samples/test2-addSet-1.nt&quot;),
+				ResourceManagement.getContentFromResource(&quot;samples/test2-deleteSet-1.nt&quot;), user,
+				&quot;test commit message 1&quot;, revisionNumber0);
+<span class="fc" id="L86">		result.revisions.put(&quot;master-1&quot;, revisionNumber1);</span>
+<span class="fc" id="L87">		String revisionNumber2 = RevisionManagement.createNewRevision(graphName,</span>
+				ResourceManagement.getContentFromResource(&quot;samples/test2-addSet-2.nt&quot;),
+				ResourceManagement.getContentFromResource(&quot;samples/test2-deleteSet-2.nt&quot;), user,
+				&quot;test commit message 2&quot;, revisionNumber1);
+<span class="fc" id="L91">		result.revisions.put(&quot;master-2&quot;, revisionNumber2);</span>
+<span class="fc" id="L92">		return result;</span>
+	}
+	
+	public static DataSetGenerationResult createSampleDataset3() throws InternalErrorException  {
+<span class="fc" id="L96">		DataSetGenerationResult result = new DataSetGenerationResult();	</span>
+<span class="fc" id="L97">		String graphName = &quot;http://test.com/r43ples-dataset-3&quot;;</span>
+<span class="fc" id="L98">		result.graphName = graphName;</span>
+<span class="fc" id="L99">		RevisionGraph graph = new RevisionGraph(graphName);</span>
+<span class="fc" id="L100">		graph.purgeRevisionInformation();</span>
+<span class="fc" id="L101">		String revisionNumber0 = RevisionManagement.putGraphUnderVersionControl(graphName, &quot;2015-01-01T14:51:37&quot;);</span>
+<span class="fc" id="L102">		result.revisions.put(&quot;master-0&quot;, revisionNumber0);</span>
+		
+		
+<span class="fc" id="L105">		String revisionNumber1 = RevisionManagement.createNewRevision(graphName,</span>
+				ResourceManagement.getContentFromResource(&quot;samples/dataset3/added-1.nt&quot;),
+				ResourceManagement.getContentFromResource(&quot;samples/dataset3/removed-1.nt&quot;), user,
+				&quot;2015-02-01T21:32:52&quot;,
+				&quot;test commit message 1&quot;, revisionNumber0);
+<span class="fc" id="L110">		result.revisions.put(&quot;master-1&quot;, revisionNumber1);</span>
+		// Create a new branch B1
+<span class="fc" id="L112">				DatasetGenerationManagement.createNewBranch(user, &quot;Create a new branch B1&quot;, graphName, revisionNumber1, &quot;B1&quot;);</span>
+
+<span class="fc" id="L114">		String revisionB1_0 = RevisionManagement.createNewRevision(graphName,</span>
+				ResourceManagement.getContentFromResource(&quot;samples/dataset3/added-2.nt&quot;),
+				ResourceManagement.getContentFromResource(&quot;samples/dataset3/removed-2.nt&quot;), user,
+				&quot;2015-03-02T09:06:52&quot;,
+				&quot;test commit message 2&quot;, &quot;B1&quot;.toLowerCase());
+<span class="fc" id="L119">		result.revisions.put(&quot;b1-0&quot;, revisionB1_0);</span>
+		
+<span class="fc" id="L121">		String revisionNumber3 = RevisionManagement.createNewRevision(graphName,</span>
+				ResourceManagement.getContentFromResource(&quot;samples/dataset3/added-3.nt&quot;),
+				ResourceManagement.getContentFromResource(&quot;samples/dataset3/removed-3.nt&quot;), user,
+				&quot;2015-04-08T14:07:59&quot;,
+				&quot;test commit message 3&quot;, revisionNumber1);
+<span class="fc" id="L126">		result.revisions.put(&quot;master-3&quot;, revisionNumber3);</span>
+		
+<span class="fc" id="L128">		String revisionNumber4 = RevisionManagement.createNewRevision(graphName,</span>
+				ResourceManagement.getContentFromResource(&quot;samples/dataset3/added-4.nt&quot;),
+				ResourceManagement.getContentFromResource(&quot;samples/dataset3/removed-4.nt&quot;), user,
+				&quot;2015-05-10T08:12:23&quot;,
+				&quot;test commit message 4&quot;, revisionNumber3);
+<span class="fc" id="L133">		result.revisions.put(&quot;master-4&quot;, revisionNumber4);</span>
+<span class="fc" id="L134">		ArrayList&lt;String&gt; usedRevisions5 = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L135">		usedRevisions5.add(revisionNumber4);</span>
+<span class="fc" id="L136">		usedRevisions5.add(revisionB1_0);</span>
+<span class="fc" id="L137">		String revisionNumber5 = RevisionManagement.createNewRevision(graphName,</span>
+				ResourceManagement.getContentFromResource(&quot;samples/dataset3/added-5.nt&quot;),
+				ResourceManagement.getContentFromResource(&quot;samples/dataset3/removed-5.nt&quot;), user,
+				&quot;2015-06-21T23:07:52&quot;,
+				&quot;test commit message 5&quot;, usedRevisions5);
+<span class="fc" id="L142">		result.revisions.put(&quot;master-5&quot;, revisionNumber5);</span>
+<span class="fc" id="L143">		return result;</span>
+	}
+
+
+	
+	/**
+	 * Create an example graph of the following structure,
+	 * 
+	 *                  ADD: D,E              ADD: G
+	 *               +-----X---------------------X--------- (Branch B1 = [B,C,E,G)
+	 *               |  DEL: A                DEL: D
+	 * ADD: A,B,C    |
+	 * ---X----------+ (Master)
+	 * DEL: -        |
+	 *               |  ADD: D,H              ADD: I    ADD: J
+	 *               +-----X---------------------X---------X----- (Branch B2 = [A,B,D,H,I,J)
+	 *                  DEL: C                DEL: -    DEL: -
+	 * 
+	 * 
+	 * @throws InternalErrorException 
+	 * @throws IOException 
+	 * @throws TemplateException 
+	 *
+	 */
+	public static DataSetGenerationResult createSampleDataSetMerging() throws InternalErrorException {
+<span class="fc" id="L168">		DataSetGenerationResult result = new DataSetGenerationResult();		</span>
+<span class="fc" id="L169">		String graphName = &quot;http://test.com/r43ples-dataset-merging&quot;;</span>
+<span class="fc" id="L170">		result.graphName = graphName;</span>
+		
+<span class="fc" id="L172">		RevisionGraph graph = new RevisionGraph(graphName);</span>
+		
+		//delete the old graph
+<span class="fc" id="L175">		graph.purgeRevisionInformation();</span>
+		
+<span class="fc" id="L177">		String revision0 = RevisionManagement.putGraphUnderVersionControl(graphName);</span>
+<span class="fc" id="L178">		result.revisions.put(&quot;master-0&quot;, revision0);</span>
+
+		// Initial commit
+<span class="fc" id="L181">		String triples = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;A\&quot;. \n&quot;</span>
+				+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;B\&quot;. \n&quot;
+				+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;C\&quot;. \n&quot;;
+<span class="fc" id="L184">		String revision1 = RevisionManagement.createNewRevision(graphName, triples, null, user, &quot;Initial commit&quot;, revision0);</span>
+<span class="fc" id="L185">		result.revisions.put(&quot;master-1&quot;, revision1);</span>
+
+		// Create a new branch B1
+<span class="fc" id="L188">		DatasetGenerationManagement.createNewBranch(user, &quot;Create a new branch B1&quot;, graphName, revision1, &quot;B1&quot;);</span>
+
+		// Create a new branch B2
+<span class="fc" id="L191">		DatasetGenerationManagement.createNewBranch(user, &quot;Create a new branch B2&quot;, graphName, revision1, &quot;B2&quot;);</span>
+
+		// First commit to B1
+<span class="fc" id="L194">		String triplesInsert = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;D\&quot;. \n&quot;</span>
+				+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;E\&quot;. \n&quot;;
+<span class="fc" id="L196">		String triplesDelete = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;A\&quot;. \n&quot;;</span>
+<span class="fc" id="L197">		String revisionB1_0 = RevisionManagement.createNewRevision(graphName, triplesInsert, triplesDelete, user, &quot;First commit to B1&quot;, &quot;B1&quot;.toLowerCase());</span>
+<span class="fc" id="L198">		result.revisions.put(&quot;b1-0&quot;, revisionB1_0);</span>
+		
+
+		// First commit to B2
+<span class="fc" id="L202">		triplesInsert = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;D\&quot;. \n&quot;</span>
+				+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;H\&quot;. \n&quot;;
+<span class="fc" id="L204">		triplesDelete = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;C\&quot;. \n&quot;;</span>
+<span class="fc" id="L205">		String revisionB2_0 = RevisionManagement.createNewRevision(graphName, triplesInsert, triplesDelete, user, &quot;First commit to B2&quot;, &quot;B2&quot;.toLowerCase());</span>
+<span class="fc" id="L206">		result.revisions.put(&quot;b2-0&quot;, revisionB2_0);</span>
+
+		// Second commit to B1
+<span class="fc" id="L209">		triplesInsert = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;G\&quot;. \n&quot;;</span>
+<span class="fc" id="L210">		triplesDelete = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;D\&quot;. \n&quot;;</span>
+<span class="fc" id="L211">		String revisionB1_1 = RevisionManagement.createNewRevision(graphName, triplesInsert, triplesDelete, user, &quot;Second commit to B1&quot;, revisionB1_0);</span>
+<span class="fc" id="L212">		result.revisions.put(&quot;b1-1&quot;, revisionB1_1);</span>
+		
+
+		// Second commit to B2
+<span class="fc" id="L216">		triplesInsert = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;I\&quot;. \n&quot;;</span>
+<span class="fc" id="L217">		String revisionB2_1 = RevisionManagement.createNewRevision(graphName, triplesInsert, null, user, &quot;Second commit to B2&quot;, revisionB2_0);</span>
+<span class="fc" id="L218">		result.revisions.put(&quot;b2-1&quot;, revisionB2_1);</span>
+		
+		// Third commit to B2
+<span class="fc" id="L221">		triplesInsert = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;J\&quot;. \n&quot;;</span>
+<span class="fc" id="L222">		String revisionB2_2 = RevisionManagement.createNewRevision(graphName, triplesInsert, null, user, &quot;Third commit to B2&quot;, revisionB2_1);</span>
+<span class="fc" id="L223">		result.revisions.put(&quot;b2-2&quot;, revisionB2_2);</span>
+		
+<span class="fc" id="L225">		logger.info(&quot;Example graph &lt;&quot; + graphName +&quot;&gt; created.&quot;);</span>
+<span class="fc" id="L226">		return result;</span>
+	}
+	
+	
+	
+	
+		
+	
+	/**
+	 * Create an example graph of the following structure,
+	 * 
+	 *                  ADD: D,E              ADD: G
+	 *               +-----X---------------------X--------- (Branch B1)
+	 *               |  DEL: -                DEL: -
+	 * ADD: A,B,C    |
+	 * ---X----------+ (Master)
+	 * DEL: -        |
+	 *               |  ADD: H              ADD: I    ADD: J
+	 *               +-----X---------------------X---------X----- (Branch B2)
+	 *                  DEL: C                DEL: -    DEL: -
+	 * 
+	 * 
+	 * @throws InternalErrorException 
+	 * @throws IOException 
+	 * @throws TemplateException 
+	 *
+	 */
+	public static String createSampleDataSetRebase() throws InternalErrorException {
+<span class="fc" id="L254">		String graphName = &quot;http://test.com/r43ples-dataset-rebase&quot;;</span>
+		
+<span class="fc" id="L256">		RevisionGraph graph = new RevisionGraph(graphName);</span>
+
+		//delete the old graph
+<span class="fc" id="L259">		graph.purgeRevisionInformation();</span>
+<span class="fc" id="L260">		String revision0 = RevisionManagement.putGraphUnderVersionControl(graphName);</span>
+
+		// Initial commit
+<span class="fc" id="L263">		String triples = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;A\&quot;. \n&quot;</span>
+				+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;B\&quot;. \n&quot;
+				+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;C\&quot;. \n&quot;;
+<span class="fc" id="L266">		String revision1 = RevisionManagement.createNewRevision(graphName, triples, null, user, &quot;Initial commit&quot;, revision0);</span>
+		
+
+		// Create a new branch B1
+<span class="fc" id="L270">		DatasetGenerationManagement.createNewBranch(user, &quot;Create a new branch B1&quot;, graphName, revision1, &quot;B1&quot;);</span>
+
+		// Create a new branch B2
+<span class="fc" id="L273">		DatasetGenerationManagement.createNewBranch(user, &quot;Create a new branch B2&quot;, graphName, revision1, &quot;B2&quot;);</span>
+
+		// First commit to B1
+<span class="fc" id="L276">		String triplesInsert = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;D\&quot;. \n&quot;</span>
+				+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;E\&quot;. \n&quot;;
+<span class="fc" id="L278">		String revisionB1_0 = RevisionManagement.createNewRevision(graphName, triplesInsert, null, user, &quot;First commit to B1&quot;, &quot;B1&quot;.toLowerCase());</span>
+		
+
+		// First commit to B2
+<span class="fc" id="L282">		triplesInsert = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;H\&quot;. \n&quot;;</span>
+<span class="fc" id="L283">		String triplesDelete = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;C\&quot;. \n&quot;;</span>
+<span class="fc" id="L284">		String revisionB2_0 = RevisionManagement.createNewRevision(graphName, triplesInsert, triplesDelete, user, &quot;First commit to B2&quot;, &quot;B2&quot;.toLowerCase());</span>
+
+		// Second commit to B1
+<span class="fc" id="L287">		triplesInsert = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;G\&quot;. \n&quot;;</span>
+<span class="fc" id="L288">		RevisionManagement.createNewRevision(graphName, triplesInsert, null, user, &quot;Second commit to B1&quot;, revisionB1_0);</span>
+		
+
+		// Second commit to B2
+<span class="fc" id="L292">		triplesInsert = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;I\&quot;. \n&quot;;</span>
+<span class="fc" id="L293">		String revisionB2_1 = RevisionManagement.createNewRevision(graphName, triplesInsert, null, user, &quot;Second commit to B2&quot;, revisionB2_0);</span>
+		
+		// Third commit to B2
+<span class="fc" id="L296">		triplesInsert = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;J\&quot;. \n&quot;;</span>
+<span class="fc" id="L297">		RevisionManagement.createNewRevision(graphName, triplesInsert, null, user, &quot;Third commit to B2&quot;, revisionB2_1);</span>
+		
+<span class="fc" id="L299">		logger.info(&quot;Example graph &lt;&quot; + graphName +&quot;&gt; created.&quot;);</span>
+<span class="fc" id="L300">		return graphName;</span>
+	}
+	
+	
+	
+	/**
+	 * 
+	 * 
+	 * @returns graphName
+	 * @throws InternalErrorException 
+	 */
+	public static String createSampleDataSetMergingClasses() throws InternalErrorException {		
+<span class="fc" id="L312">		String graphName = &quot;http://test.com/r43ples-dataset-merging-classes&quot;;</span>
+		
+<span class="fc" id="L314">		RevisionGraph graph = new RevisionGraph(graphName);</span>
+		
+		/** The initial content file path **/
+<span class="fc" id="L317">		String initialContentFilePath = &quot;verification/ExampleGraphClasses_initial.triples&quot;;</span>
+
+		// Read initial content from file to string
+<span class="fc" id="L320">		String initialContent = ResourceManagement.getContentFromResource(initialContentFilePath);</span>
+
+		//delete the old graph
+<span class="fc" id="L323">		graph.purgeRevisionInformation();</span>
+		
+<span class="fc" id="L325">		String revision0 = RevisionManagement.putGraphUnderVersionControl(graphName);</span>
+
+		// Initial commit
+<span class="fc" id="L328">		String revision1 = RevisionManagement.createNewRevision(graphName, initialContent, null, user, &quot;Initial commit&quot;, revision0);</span>
+
+		// Create a new branch B1
+<span class="fc" id="L331">		DatasetGenerationManagement.createNewBranch(user, &quot;Create a new branch B1&quot;, graphName, revision1, &quot;B1&quot;);</span>
+
+		// Create a new branch B2
+<span class="fc" id="L334">		DatasetGenerationManagement.createNewBranch(user, &quot;Create a new branch B2&quot;, graphName, revision1, &quot;B2&quot;);</span>
+
+		// First commit to B1 - insert sub plant T4
+<span class="fc" id="L337">		String insertT4 = &quot;&lt;http://eatld.et.tu-dresden.de/batch/A3A5R07QZU&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://eatld.et.tu-dresden.de/mso/Unit&gt; . \n&quot;</span>
+				+ &quot;&lt;http://eatld.et.tu-dresden.de/batch/A3A5R07QZU&gt; &lt;http://www.w3.org/2000/01/rdf-schema#label&gt; \&quot;T4\&quot;@en . \n&quot;
+				+ &quot;&lt;http://eatld.et.tu-dresden.de/batch/A3A5R07QZU&gt; &lt;http://eatld.et.tu-dresden.de/mso/rfid&gt; \&quot;E00401007837683C\&quot;@en . \n&quot;
+				+ &quot;&lt;http://eatld.et.tu-dresden.de/batch/A3A5R07QZU&gt; &lt;http://eatld.et.tu-dresden.de/mso/hasEquipment&gt; &lt;http://eatld.et.tu-dresden.de/batch/A3A5R02ZZU&gt; . \n&quot;
+				+ &quot;&lt;http://eatld.et.tu-dresden.de/batch/A3A5R07QZU&gt; &lt;http://eatld.et.tu-dresden.de/mso/isPartOfProcessCell&gt; &lt;http://eatld.et.tu-dresden.de/batch/A3A5R03UZU&gt; . \n&quot;
+				+ &quot;&lt;http://eatld.et.tu-dresden.de/batch/A3A5R07QZU&gt; &lt;http://eatld.et.tu-dresden.de/mso/hasEquipment&gt; &lt;http://eatld.et.tu-dresden.de/batch/A3A5R06OZU&gt; . \n&quot;
+				+ &quot;&lt;http://eatld.et.tu-dresden.de/batch/A3A5R07QZU&gt; &lt;http://eatld.et.tu-dresden.de/mso/hasEquipment&gt; &lt;http://eatld.et.tu-dresden.de/batch/A3A5R01ZZU&gt; . \n&quot;
+				+ &quot;&lt;http://eatld.et.tu-dresden.de/batch/A3A5R07QZU&gt; &lt;http://eatld.et.tu-dresden.de/mso/comosUid&gt; \&quot;A3A5R07QZU\&quot;@en . \n&quot;
+				+ &quot;&lt;http://eatld.et.tu-dresden.de/batch/A3A5R07QZU&gt; &lt;http://eatld.et.tu-dresden.de/mso/plantID&gt; \&quot;=TUDPLT.A1.T4\&quot;@en . \n&quot;
+				+ &quot;&lt;http://eatld.et.tu-dresden.de/batch/A3A5R07QZU&gt; &lt;http://eatld.et.tu-dresden.de/mso/hasEquipment&gt; &lt;http://eatld.et.tu-dresden.de/batch/A3A5R02BZU&gt; . \n&quot;
+				+ &quot;&lt;http://eatld.et.tu-dresden.de/batch/A3A5R07QZU&gt; &lt;http://eatld.et.tu-dresden.de/mso/hasEquipment&gt; &lt;http://eatld.et.tu-dresden.de/batch/A3A5R1AMZU&gt; . \n&quot;
+				+ &quot;&lt;http://eatld.et.tu-dresden.de/batch/A3A5R07QZU&gt; &lt;http://eatld.et.tu-dresden.de/mso/hasEquipment&gt; &lt;http://eatld.et.tu-dresden.de/batch/A3A5R05NZU&gt; . \n&quot;
+				+ &quot;&lt;http://eatld.et.tu-dresden.de/batch/A3A5R07QZU&gt; &lt;http://eatld.et.tu-dresden.de/mso/hasEquipment&gt; &lt;http://eatld.et.tu-dresden.de/batch/A3A5R01PZU&gt; . \n&quot;
+				+ &quot;&lt;http://eatld.et.tu-dresden.de/batch/A3A5R07QZU&gt; &lt;http://www.w3.org/2000/01/rdf-schema#comment&gt; \&quot;Subplant flush\&quot;@en . \n&quot;;
+<span class="fc" id="L351">		String revisionB1_0 = RevisionManagement.createNewRevision(graphName, insertT4, null, user, &quot;First commit to B1&quot;, &quot;B1&quot;.toLowerCase());</span>
+		
+		// Second commit to B1 - delete sub plant T4
+<span class="fc" id="L354">		DatasetGenerationManagement.executeDeleteWhereQuery(user, &quot;Second commit to B1&quot;, graphName, revisionB1_0,</span>
+				&quot;&lt;http://eatld.et.tu-dresden.de/batch/A3A5R07QZU&gt; ?p ?o . \n&quot;);
+
+		// First commit to B2 - insert sub plant T4
+<span class="fc" id="L358">		String revisionB2_0 = RevisionManagement.createNewRevision(graphName, insertT4, null, user, &quot;First commit to B2&quot;, &quot;B2&quot;.toLowerCase());</span>
+		
+		// Second commit to B2 - delete armature V002
+<span class="fc" id="L361">		DatasetGenerationManagement.executeDeleteWhereQuery(user, &quot;Second commit to B2&quot;, graphName,revisionB2_0,</span>
+				&quot;&lt;http://eatld.et.tu-dresden.de/batch/A3A5R01TZU&gt; ?p ?o . \n&quot;);
+		
+<span class="fc" id="L364">		logger.info(&quot;Example graph &lt;&quot; + graphName +&quot;&gt; created.&quot;);</span>
+<span class="fc" id="L365">		return graphName;</span>
+	}
+
+	
+	/**
+	 * Create an example graph of the following structure:
+	 * 
+	 *                  ADD: 2D               ADD: 1G
+	 *               +-----X---------------------X--------- (Branch B1)
+	 *               |  DEL: 1A               DEL: 2D
+	 * ADD: 1A,1B,2C |
+	 * ---X----------+ (Master)
+	 * DEL: -        |
+	 *               |  ADD: 2D,2H            ADD: 2I
+	 *               +-----X---------------------X--------- (Branch B2)
+	 *                  DEL: 2C               DEL: -
+	 * 
+	 * Contains the renaming of 1A to 1G.
+	 * 
+	 * @returns graphName
+	 * @throws InternalErrorException
+	 */
+	public static String createSampleDataSetRenaming() throws InternalErrorException {
+<span class="fc" id="L388">		String graphName = &quot;http://test.com/r43ples-dataset-renaming&quot;;</span>
+		
+<span class="fc" id="L390">		RevisionGraph graph = new RevisionGraph(graphName);</span>
+
+		//delete the old graph
+<span class="fc" id="L393">		graph.purgeRevisionInformation();</span>
+<span class="fc" id="L394">		String revision0 = RevisionManagement.putGraphUnderVersionControl(graphName);</span>
+
+		// Initial commit
+<span class="fc" id="L397">		String triples = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP1&gt; \&quot;A\&quot;. \n&quot;</span>
+				+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP1&gt; \&quot;B\&quot;. \n&quot;
+				+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP2&gt; \&quot;C\&quot;. \n&quot;;
+<span class="fc" id="L400">		String revision1 = RevisionManagement.createNewRevision(graphName, triples, null, user, &quot;Initial commit&quot;, revision0);</span>
+		
+		// Create a new branch B1
+<span class="fc" id="L403">		DatasetGenerationManagement.createNewBranch(user, &quot;Create a new branch B1&quot;, graphName, revision1, &quot;B1&quot;);</span>
+
+		// Create a new branch B2
+<span class="fc" id="L406">		DatasetGenerationManagement.createNewBranch(user, &quot;Create a new branch B2&quot;, graphName, revision1, &quot;B2&quot;);</span>
+
+		// First commit to B1
+<span class="fc" id="L409">		String triplesInsert = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP2&gt; \&quot;D\&quot;. \n&quot;;</span>
+
+<span class="fc" id="L411">		String triplesDelete = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP1&gt; \&quot;A\&quot;. \n&quot;;</span>
+<span class="fc" id="L412">		String revisionB1_0 = RevisionManagement.createNewRevision(graphName, triplesInsert, triplesDelete, user, &quot;First commit to B1&quot;, &quot;B1&quot;.toLowerCase());</span>
+		
+		// First commit to B2
+<span class="fc" id="L415">		triplesInsert = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP2&gt; \&quot;D\&quot;. \n&quot;</span>
+				+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP2&gt; \&quot;H\&quot;. \n&quot;;
+<span class="fc" id="L417">		triplesDelete = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP2&gt; \&quot;C\&quot;. \n&quot;;</span>
+<span class="fc" id="L418">		String revisionB2_0 = RevisionManagement.createNewRevision(graphName, triplesInsert, triplesDelete, user, &quot;First commit to B2&quot;, &quot;B2&quot;.toLowerCase());</span>
+		
+		// Second commit to B1
+<span class="fc" id="L421">		triplesInsert = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP1&gt; \&quot;G\&quot;. \n&quot;;</span>
+<span class="fc" id="L422">		triplesDelete = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP2&gt; \&quot;D\&quot;. \n&quot;;		</span>
+<span class="fc" id="L423">		RevisionManagement.createNewRevision(graphName, triplesInsert, triplesDelete, user, &quot;Second commit to B1&quot;, revisionB1_0);</span>
+		
+		// Second commit to B2
+<span class="fc" id="L426">		triplesInsert = &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP2&gt; \&quot;I\&quot;. \n&quot;;</span>
+<span class="fc" id="L427">		RevisionManagement.createNewRevision(graphName, triplesInsert, null, user, &quot;Second commit to B2&quot;, revisionB2_0);</span>
+<span class="fc" id="L428">		logger.info(&quot;Example graph &lt;&quot; + graphName +&quot;&gt; created.&quot;);</span>
+		
+<span class="fc" id="L430">		return graphName;</span>
+	}
+
+	
+	/**
+	 * Create an example graph of the following structure:
+	 * 
+	 *                                              ADD: -      ADD: -                                                     
+	 *                                           +-----X-----------X-----------(Branch B1X)--+                            
+	 *                                           |  DEL: B      DEL: C                        \                              
+	 *                                           |                                             \                             
+	 *                  ADD: D,E       ADD: G    |        ADD: F                                \                          
+	 *               +-----X--------------X------+-----------X-----------------(Branch B1)-------+--+                       
+	 *               |  DEL: A         DEL: D             DEL: -                                     \                       
+	 *               |                                                                                \                      
+	 *               |                              ADD: J      ADD: C                                 \                     
+	 *               |                           +-----X-----------X-----------(Branch B2X)--+          \                                   
+	 *               |                           |  DEL: -      DEL: I                        \          \                  
+	 *               |                           |                                             \          \                  
+	 *               |  ADD: D,H       ADD: I    |  ADD: K,L    ADD: M                          \          \              
+	 *               +-----X--------------X------+-----X-----------X-----------(Branch B2)-------+----------+--+             
+	 *               |  DEL: C         DEL: -       DEL: I      DEL: -                                          \            
+	 *               |                                                                                           \           
+	 *               |                                                                                            \          
+	 * ADD: A,B,C    |          ADD: M,N            ADD: P,R,S                                                     \        
+	 * ---X----------+-------------X-------------------X-----------------------(MASTER)-----------------------------+--      
+	 * DEL: -                   DEL: C              DEL: M                                                                     
+	 * 
+	 * @returns graphName
+	 * @throws InternalErrorException
+	 */
+	public static String createSampleDataSetComplexStructure() throws InternalErrorException {
+<span class="fc" id="L462">		String graphName = &quot;http://test.com/r43ples-dataset-complex-structure&quot;;</span>
+		
+<span class="fc" id="L464">		RevisionGraph graph = new RevisionGraph(graphName);</span>
+		
+		//delete the old graph
+<span class="fc" id="L467">		graph.purgeRevisionInformation();</span>
+<span class="fc" id="L468">		String revision0 = RevisionManagement.putGraphUnderVersionControl(graphName);</span>
+		
+		// Initial commit
+<span class="fc" id="L471">		String triples =  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;A\&quot;. \n&quot;</span>
+						+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;B\&quot;. \n&quot;
+						+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;C\&quot;. \n&quot;;
+<span class="fc" id="L474">		String revision1 = RevisionManagement.createNewRevision(graphName, triples, null, user, &quot;Initial commit&quot;, revision0);</span>
+		
+		// Create a new branch B1
+<span class="fc" id="L477">		DatasetGenerationManagement.createNewBranch(user, &quot;Create a new branch B1&quot;, graphName, revision1, &quot;B1&quot;);</span>
+		
+		// Create a new branch B2
+<span class="fc" id="L480">		DatasetGenerationManagement.createNewBranch(user, &quot;Create a new branch B2&quot;, graphName, revision1, &quot;B2&quot;);</span>
+		
+		// First commit to B1
+<span class="fc" id="L483">		String triplesInsert =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;D\&quot;. \n&quot;</span>
+								+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;E\&quot;. \n&quot;;
+<span class="fc" id="L485">		String triplesDelete =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;A\&quot;. \n&quot;;</span>
+<span class="fc" id="L486">		DatasetGenerationManagement.executeInsertDeleteQuery(user, &quot;First commit to B1&quot;, graphName, &quot;B1&quot;, triplesInsert, triplesDelete);</span>
+		
+		// Second commit to B1
+<span class="fc" id="L489">		triplesInsert =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;G\&quot;. \n&quot;;</span>
+<span class="fc" id="L490">		triplesDelete =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;D\&quot;. \n&quot;;</span>
+<span class="fc" id="L491">		DatasetGenerationManagement.executeInsertDeleteQuery(user, &quot;Second commit to B1&quot;, graphName, &quot;B1&quot;, triplesInsert, triplesDelete);</span>
+		
+		// Create a new branch B1X
+<span class="fc" id="L494">		DatasetGenerationManagement.createNewBranch(user, &quot;Create a new branch B1X&quot;, graphName, &quot;B1&quot;, &quot;B1X&quot;);</span>
+		
+		// First commit to B1X
+<span class="fc" id="L497">		triplesDelete =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;B\&quot;. \n&quot;;</span>
+<span class="fc" id="L498">		DatasetGenerationManagement.executeDeleteQuery(user, &quot;First commit to B1X&quot;, graphName, &quot;B1X&quot;, triplesDelete);</span>
+		
+		// Second commit to B1X
+<span class="fc" id="L501">		triplesDelete =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;C\&quot;. \n&quot;;</span>
+<span class="fc" id="L502">		DatasetGenerationManagement.executeDeleteQuery(user, &quot;Second commit to B1X&quot;, graphName, &quot;B1X&quot;, triplesDelete);</span>
+		
+		// Third commit to B1
+<span class="fc" id="L505">		triplesInsert =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;F\&quot;. \n&quot;;</span>
+<span class="fc" id="L506">		DatasetGenerationManagement.executeInsertQuery(user, &quot;Third commit to B1&quot;, graphName, &quot;B1&quot;, triplesInsert);</span>
+		
+		// First commit to B2
+<span class="fc" id="L509">		triplesInsert =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;D\&quot;. \n&quot;</span>
+						+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;H\&quot;. \n&quot;;
+<span class="fc" id="L511">		triplesDelete =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;C\&quot;. \n&quot;;</span>
+<span class="fc" id="L512">		DatasetGenerationManagement.executeInsertDeleteQuery(user, &quot;First commit to B2&quot;, graphName, &quot;B2&quot;, triplesInsert, triplesDelete);</span>
+		
+		// Second commit to B2
+<span class="fc" id="L515">		triplesInsert =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;I\&quot;. \n&quot;;</span>
+<span class="fc" id="L516">		DatasetGenerationManagement.executeInsertQuery(user, &quot;Second commit to B2&quot;, graphName, &quot;B2&quot;, triplesInsert);</span>
+		
+		// Create a new branch B2X
+<span class="fc" id="L519">		DatasetGenerationManagement.createNewBranch(user, &quot;Create a new branch B2X&quot;, graphName, &quot;B2&quot;, &quot;B2X&quot;);</span>
+		
+		// First commit to B2X
+<span class="fc" id="L522">		triplesInsert =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;J\&quot;. \n&quot;;</span>
+<span class="fc" id="L523">		DatasetGenerationManagement.executeInsertQuery(user, &quot;First commit to B2X&quot;, graphName, &quot;B2X&quot;, triplesInsert);</span>
+<span class="fc" id="L524">		RevisionManagement.createTag(graphName, &quot;b2x&quot;, &quot;v0.2&quot;, &quot;butler&quot;, &quot;tag version v0.2&quot;);</span>
+		
+		// Second commit to B2X
+<span class="fc" id="L527">		triplesInsert =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;C\&quot;. \n&quot;;</span>
+<span class="fc" id="L528">		triplesDelete =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;I\&quot;. \n&quot;;</span>
+<span class="fc" id="L529">		DatasetGenerationManagement.executeInsertDeleteQuery(user, &quot;Second commit to B2X&quot;, graphName, &quot;B2X&quot;, triplesInsert, triplesDelete);</span>
+		
+		// Third commit to B2
+<span class="fc" id="L532">		triplesInsert =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;K\&quot;. \n&quot;</span>
+						+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;L\&quot;. \n&quot;;
+<span class="fc" id="L534">		triplesDelete =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;I\&quot;. \n&quot;;</span>
+<span class="fc" id="L535">		DatasetGenerationManagement.executeInsertDeleteQuery(user, &quot;Third commit to B2&quot;, graphName, &quot;B2&quot;, triplesInsert, triplesDelete);</span>
+		
+		
+		// Fourth commit to B2
+<span class="fc" id="L539">		triplesInsert =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;M\&quot;. \n&quot;;</span>
+<span class="fc" id="L540">		DatasetGenerationManagement.executeInsertQuery(user, &quot;Fourth commit to B2&quot;, graphName, &quot;B2&quot;, triplesInsert);</span>
+		
+		// Second commit to master
+<span class="fc" id="L543">		triplesInsert =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;M\&quot;. \n&quot;</span>
+						+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;N\&quot;. \n&quot;;
+<span class="fc" id="L545">		triplesDelete =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;C\&quot;. \n&quot;;</span>
+<span class="fc" id="L546">		DatasetGenerationManagement.executeInsertDeleteQuery(user, &quot;Second commit to MASTER&quot;, graphName, &quot;master&quot;, triplesInsert, triplesDelete);</span>
+		
+		// Third commit to master
+<span class="fc" id="L549">		triplesInsert =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;P\&quot;. \n&quot;</span>
+						+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;R\&quot;. \n&quot;
+						+ &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;S\&quot;. \n&quot;;
+<span class="fc" id="L552">		triplesDelete =	  &quot;&lt;http://example.com/testS&gt; &lt;http://example.com/testP&gt; \&quot;M\&quot;. \n&quot;;</span>
+<span class="fc" id="L553">		DatasetGenerationManagement.executeInsertDeleteQuery(user, &quot;Third commit to MASTER&quot;, graphName, &quot;master&quot;, triplesInsert, triplesDelete);</span>
+		
+<span class="fc" id="L555">		logger.info(&quot;Example graph &lt;&quot; + graphName +&quot;&gt; created.&quot;);</span>
+<span class="fc" id="L556">		return graphName;</span>
+	}
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

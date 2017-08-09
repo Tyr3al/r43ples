@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StrategyManagement.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.merging.management</a> &gt; <span class="el_source">StrategyManagement.java</span></div><h1>StrategyManagement.java</h1><pre class="source lang-java linenums">package de.tud.plt.r43ples.merging.management;
+
+import java.util.LinkedList;
+
+import org.apache.log4j.Logger;
+
+import com.hp.hpl.jena.query.QuerySolution;
+import com.hp.hpl.jena.query.ResultSet;
+
+import de.tud.plt.r43ples.management.Config;
+import de.tud.plt.r43ples.triplestoreInterface.TripleStoreInterfaceSingleton;
+
+<span class="nc" id="L13">public class StrategyManagement {</span>
+<span class="fc" id="L14">	private static Logger logger = Logger.getLogger(StrategyManagement.class);</span>
+		
+	
+	/**get commitUri of the revisionUri
+	 * @param uri of the revision*/
+	public static String getCommitUri(String revisionGraph, String revisionUri){
+		
+<span class="fc" id="L21">		String query = String.format(</span>
+				  &quot;PREFIX prov: &lt;http://www.w3.org/ns/prov#&gt; %n&quot;
+				+ &quot;SELECT DISTINCT ?commit  %n&quot;
+				+ &quot;WHERE { %n&quot;
+				+ &quot;	GRAPH &lt;%s&gt; { %n&quot;
+				+ &quot;		?commit prov:generated &lt;%s&gt;.&quot;
+				+ &quot; }&quot;
+				+ &quot;}&quot;, revisionGraph, revisionUri);
+		
+<span class="fc" id="L30">		ResultSet resultSet = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+		
+<span class="pc bpc" id="L32" title="1 of 2 branches missed.">		if (resultSet.hasNext()) {</span>
+<span class="fc" id="L33">			QuerySolution qs = resultSet.next();</span>
+<span class="fc" id="L34">			return qs.getResource(&quot;?commit&quot;).toString();</span>
+		}
+		
+<span class="nc" id="L37">		logger.info(&quot;No commit could be found.&quot;);</span>
+<span class="nc" id="L38">		return null;</span>
+	}
+	
+	
+	/** get the delta removed width versionUri
+	 * @param uri of the added or removed triple set*/
+	public static LinkedList&lt;String&gt; createAddedOrRemovedTripleSet(String addedOrRemovedDelta) {
+<span class="nc" id="L45">		String query = Config.prefixes + String.format(&quot;&quot;</span>
+				+&quot;SELECT DISTINCT ?s ?p ?o %n&quot;
+				+&quot;WHERE{ GRAPH &lt;%s&gt; %n&quot;
+				+&quot;		{ ?s ?p ?o . } %n&quot;
+				+&quot;}&quot;, addedOrRemovedDelta);
+<span class="nc" id="L50">		ResultSet resultSet = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+		
+<span class="nc" id="L52">		LinkedList&lt;String&gt; tripleList = new LinkedList&lt;String&gt;();</span>
+<span class="nc bnc" id="L53" title="All 2 branches missed.">		while(resultSet.hasNext()) {</span>
+<span class="nc" id="L54">			QuerySolution qs = resultSet.next();</span>
+<span class="nc" id="L55">			String subject = &quot;&lt;&quot; + qs.getResource(&quot;?s&quot;).toString() + &quot;&gt;&quot;;</span>
+<span class="nc" id="L56">			String predicate = &quot;&lt;&quot; + qs.getResource(&quot;?p&quot;).toString() + &quot;&gt;&quot;;</span>
+<span class="nc" id="L57">			String object = &quot;&quot;;</span>
+			
+<span class="nc bnc" id="L59" title="All 2 branches missed.">			if (qs.get(&quot;?o&quot;).isLiteral()) {</span>
+<span class="nc" id="L60">				object = &quot;\&quot;&quot; + qs.getLiteral(&quot;?o&quot;).toString() + &quot;\&quot;&quot;;</span>
+			} else {
+<span class="nc" id="L62">				object = &quot;&lt;&quot; + qs.getResource(&quot;?o&quot;).toString() + &quot;&gt;&quot;;</span>
+			}
+			
+<span class="nc" id="L65">			String triple = subject + &quot; &quot; + predicate + &quot; &quot; + object;</span>
+<span class="nc" id="L66">			tripleList.add(triple);</span>
+<span class="nc" id="L67">			logger.info(&quot;patch--triple&quot; + triple);</span>
+<span class="nc" id="L68">		}</span>
+		
+<span class="nc" id="L70">		return tripleList;</span>
+	}
+	
+	/** get number of revision
+	 * @param uri of revision*/
+	public static String getRevisionNumber(String revisionGraph, String revisionUri){
+<span class="fc" id="L76">		String query = Config.prefixes + String.format(&quot;&quot;</span>
+				+&quot;SELECT DISTINCT ?revisionNumber %n&quot;
+				+&quot;WHERE{ GRAPH &lt;%s&gt; %n&quot;
+				+&quot;   {&lt;%s&gt; rmo:revisionNumber ?revisionNumber. } }%n&quot;,
+				revisionGraph, revisionUri);
+		
+<span class="fc" id="L82">		ResultSet resultSet = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+		
+<span class="pc bpc" id="L84" title="1 of 2 branches missed.">		if (resultSet.hasNext()) {</span>
+<span class="fc" id="L85">			QuerySolution qs = resultSet.next();</span>
+<span class="fc" id="L86">			return qs.getLiteral(&quot;?revisionNumber&quot;).toString();</span>
+		}
+		
+<span class="nc" id="L89">		logger.warn(&quot;No revision number could be found.&quot;);</span>
+<span class="nc" id="L90">		return null;</span>
+	}
+	
+	/** get client name
+	 * @param uri of commit */
+	public static String getCommitUserUri(String revisionGraph, String commitUri) {
+<span class="fc" id="L96">		String query = Config.prefixes + String.format(&quot;&quot;</span>
+				+&quot;SELECT DISTINCT ?user %n&quot;
+				+&quot;WHERE{ GRAPH &lt;%s&gt; %n&quot;
+				+&quot;   {&lt;%s&gt; prov:wasAssociatedWith ?user. } }%n&quot;,
+				revisionGraph, commitUri);
+		
+<span class="fc" id="L102">		ResultSet resultSet = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+		
+<span class="pc bpc" id="L104" title="1 of 2 branches missed.">		if (resultSet.hasNext()) {</span>
+<span class="fc" id="L105">			QuerySolution qs = resultSet.next();</span>
+<span class="fc" id="L106">			String userUri = qs.getResource(&quot;?user&quot;).toString();		</span>
+<span class="fc" id="L107">			int count = userUri.split(&quot;/&quot;).length;</span>
+<span class="fc" id="L108">			return userUri.split(&quot;/&quot;)[count-1];</span>
+		}
+		
+<span class="nc" id="L111">		logger.info(&quot;No revision number could be found.&quot;);</span>
+<span class="nc" id="L112">		return null;</span>
+	}
+	
+	/** get client message
+	 * @param uri of commit*/
+	public static String getCommitMessage(String revisionGraph, String commitUri) {
+<span class="fc" id="L118">		String query = Config.prefixes + String.format(&quot;&quot;</span>
+				+&quot;SELECT DISTINCT ?message %n&quot;
+				+&quot;WHERE{ GRAPH &lt;%s&gt; %n&quot;
+				+&quot;   {&lt;%s&gt; dc-terms:title ?message. } }%n&quot;,
+				revisionGraph, commitUri);
+		
+<span class="fc" id="L124">		ResultSet resultSet = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+		
+<span class="pc bpc" id="L126" title="1 of 2 branches missed.">		if (resultSet.hasNext()) {</span>
+<span class="fc" id="L127">			QuerySolution qs = resultSet.next();</span>
+<span class="fc" id="L128">			return qs.getLiteral(&quot;?message&quot;).toString();</span>
+		}
+		
+<span class="nc" id="L131">		logger.info(&quot;No revision number could be found.&quot;);</span>
+<span class="nc" id="L132">		return null;</span>
+	}	
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

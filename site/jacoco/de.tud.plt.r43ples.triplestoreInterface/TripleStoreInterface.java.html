@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TripleStoreInterface.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.triplestoreInterface</a> &gt; <span class="el_source">TripleStoreInterface.java</span></div><h1>TripleStoreInterface.java</h1><pre class="source lang-java linenums">package de.tud.plt.r43ples.triplestoreInterface;
+
+import java.io.ByteArrayOutputStream;
+import java.util.Iterator;
+import java.util.regex.Pattern;
+
+import org.apache.log4j.Logger;
+
+import com.hp.hpl.jena.query.ResultSet;
+import com.hp.hpl.jena.query.ResultSetFormatter;
+import com.hp.hpl.jena.rdf.model.Model;
+import com.hp.hpl.jena.shared.NoWriterForLangException;
+import com.hp.hpl.jena.sparql.resultset.ResultsFormat;
+
+import de.tud.plt.r43ples.management.Config;
+import de.tud.plt.r43ples.management.JenaModelManagement;
+import de.tud.plt.r43ples.management.RevisionManagement;
+
+
+<span class="fc" id="L20">public abstract class TripleStoreInterface {</span>
+	
+	/** The logger. */
+<span class="fc" id="L23">	private static Logger logger = Logger.getLogger(TripleStoreInterface.class);</span>
+	
+	protected void init() {
+<span class="fc bfc" id="L26" title="All 2 branches covered.">		if (!RevisionManagement.checkGraphExistence(Config.revision_graph)){</span>
+<span class="fc" id="L27">			logger.debug(&quot;Create revision graph: &quot;+ Config.revision_graph);</span>
+<span class="fc" id="L28">			executeUpdateQuery(&quot;CREATE SILENT GRAPH &lt;&quot; + Config.revision_graph +&quot;&gt;&quot;);</span>
+	 	}
+		
+<span class="fc bfc" id="L31" title="All 2 branches covered.">		if (!RevisionManagement.checkGraphExistence(Config.sdd_graph)){</span>
+			// Insert default content into SDD graph
+<span class="fc" id="L33">			logger.info(&quot;Create sdd graph from &quot; + Config.sdd_graph_defaultContent);</span>
+<span class="fc" id="L34">			executeUpdateQuery(&quot;CREATE SILENT GRAPH &lt;&quot; + Config.revision_graph +&quot;&gt;&quot;);</span>
+			
+<span class="fc" id="L36">			Model jena_model = JenaModelManagement.readTurtleFileToJenaModel(Config.sdd_graph_defaultContent);</span>
+<span class="fc" id="L37">			String model = JenaModelManagement.convertJenaModelToNTriple(jena_model);</span>
+<span class="fc" id="L38">			logger.debug(&quot;SDD model: &quot; + model);	</span>
+<span class="fc" id="L39">			RevisionManagement.executeINSERT(Config.sdd_graph, model);</span>
+	 	}		
+<span class="fc" id="L41">	}</span>
+	
+	protected abstract void close();
+		
+	
+	public String executeSelectConstructAskQuery(String sparqlQuery, String format) {
+<span class="fc" id="L47">		logger.debug(&quot;Query: &quot; + sparqlQuery);</span>
+<span class="fc" id="L48">		final int patternModifier = Pattern.DOTALL + Pattern.MULTILINE + Pattern.CASE_INSENSITIVE;</span>
+<span class="fc" id="L49">		final Pattern patternSelectQuery = Pattern.compile(</span>
+				&quot;SELECT.*WHERE\\s*\\{(?&lt;where&gt;.*)\\}&quot;, 
+				patternModifier);
+<span class="fc" id="L52">		final Pattern patternAskQuery = Pattern.compile(</span>
+				&quot;ASK.*WHERE\\s*\\{(?&lt;where&gt;.*)\\}&quot;, 
+				patternModifier);
+<span class="fc" id="L55">		final Pattern patternConstructQuery = Pattern.compile(</span>
+				&quot;CONSTRUCT.*WHERE\\s*\\{(?&lt;where&gt;.*)\\}&quot;, 
+				patternModifier);
+		String result;
+<span class="fc bfc" id="L59" title="All 2 branches covered.">		if (patternSelectQuery.matcher(sparqlQuery).find())</span>
+<span class="fc" id="L60">			result = executeSelectQuery(sparqlQuery, format);</span>
+<span class="pc bpc" id="L61" title="1 of 2 branches missed.">		else if (patternAskQuery.matcher(sparqlQuery).find())</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">			result = executeAskQuery(sparqlQuery)?&quot;true&quot;:&quot;false&quot;;</span>
+<span class="pc bpc" id="L63" title="1 of 2 branches missed.">		else if (patternConstructQuery.matcher(sparqlQuery).find())</span>
+<span class="fc" id="L64">			result = executeConstructQuery(sparqlQuery, format);</span>
+		else
+<span class="nc" id="L66">			result = executeSelectQuery(sparqlQuery, format);</span>
+<span class="fc" id="L67">		logger.debug(&quot;Response: &quot; + result);</span>
+<span class="fc" id="L68">		return result;</span>
+	}
+	
+	/**
+	 * Executes a SELECT query.
+	 * 
+	 * @param selectQueryString the SELECT query
+	 * @return result set
+	 */
+	public abstract ResultSet executeSelectQuery(String selectQueryString) ;
+	
+	
+
+	/**
+	 * Executes a SELECT query.
+	 * 
+	 * @param selectQueryString the SELECT query
+	 * @param format the format
+	 * @return result string in specified format
+	 */
+	public String executeSelectQuery(String selectQueryString, String format) {
+<span class="fc" id="L89">		ResultSet results = executeSelectQuery(selectQueryString);</span>
+<span class="fc" id="L90">		ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
+<span class="pc bpc" id="L91" title="2 of 6 branches missed.">		if (format.equals(&quot;application/sparql-results+xml&quot;) || format.equals(&quot;application/xml&quot;) || format.equals(&quot;text/xml&quot;))</span>
+<span class="fc" id="L92">			ResultSetFormatter.outputAsXML(baos, results);</span>
+<span class="fc bfc" id="L93" title="All 2 branches covered.">		else if (format.equals(&quot;text/turtle&quot;) )</span>
+<span class="fc" id="L94">			ResultSetFormatter.output(baos, results, ResultsFormat.FMT_RDF_TTL);</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">		else if (format.equals(&quot;application/json&quot;) )</span>
+<span class="fc" id="L96">			ResultSetFormatter.outputAsJSON(baos, results);</span>
+<span class="pc bpc" id="L97" title="1 of 2 branches missed.">		else if (format.equals(&quot;text/plain&quot;) )</span>
+<span class="nc" id="L98">			ResultSetFormatter.out(baos, results);</span>
+		else
+<span class="fc" id="L100">			ResultSetFormatter.out(baos, results);</span>
+<span class="fc" id="L101">		return baos.toString();</span>
+	}
+	
+	
+	/**
+	 * Executes a CONSTRUCT query.
+	 * 
+	 * @param constructQueryString the CONSTRUCT query
+	 * @param format the result format
+	 * @return formatted result
+	 */
+	public String executeConstructQuery(String constructQueryString, String format) {
+<span class="fc" id="L113">		logger.debug(&quot;Query: &quot; + constructQueryString);</span>
+<span class="fc" id="L114">		Model result = executeConstructQuery(constructQueryString);</span>
+<span class="fc" id="L115">		ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
+		
+<span class="fc bfc" id="L117" title="All 2 branches covered.">		if (format.toLowerCase().contains(&quot;xml&quot;) )</span>
+<span class="fc" id="L118">			result.write(baos, &quot;RDF/XML&quot;);</span>
+<span class="fc bfc" id="L119" title="All 2 branches covered.">		else if (format.toLowerCase().contains(&quot;turtle&quot;) )</span>
+<span class="fc" id="L120">			result.write(baos, &quot;Turtle&quot;);</span>
+<span class="fc bfc" id="L121" title="All 2 branches covered.">		else if (format.toLowerCase().contains(&quot;json&quot;) )</span>
+<span class="fc" id="L122">			result.write(baos, &quot;RDF/JSON&quot;);</span>
+		else {
+			try {
+<span class="fc" id="L125">				result.write(baos, format);</span>
+			}
+<span class="nc" id="L127">			catch (NoWriterForLangException e) {</span>
+<span class="nc" id="L128">				result.write(baos, &quot;Turtle&quot;);</span>
+<span class="fc" id="L129">			}</span>
+		}
+<span class="fc" id="L131">		logger.debug(&quot;Result: &quot; + baos.toString());</span>
+<span class="fc" id="L132">		return baos.toString();</span>
+	}
+	
+	
+	public abstract Model executeConstructQuery(String constructQueryString) ;
+	
+	
+	/**
+	 * Executes a DESCRIBE query.
+	 * 
+	 * @param describeQueryString the CONSTRUCT query
+	 * @param format the result format
+	 * @return formatted result
+	 */
+	public String executeDescribeQuery(String describeQueryString, String format) {
+<span class="nc" id="L147">		logger.debug(&quot;Query: &quot; + describeQueryString);</span>
+<span class="nc" id="L148">		Model result = executeConstructQuery(describeQueryString);</span>
+<span class="nc" id="L149">		ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
+<span class="nc" id="L150">		result.write(baos, format);</span>
+<span class="nc" id="L151">		return baos.toString();</span>
+	}
+	
+
+	public abstract Model executeDescribeQuery(String describeQueryString) ;
+	
+
+	/**
+	 * Executes an ASK query.
+	 * 
+	 * @param askQueryString the ASK query
+	 * @return boolean result of ASK query
+	 */
+	public abstract boolean executeAskQuery(String askQueryString) ;
+	
+	/**
+	 * Executes an UPDATE query.
+	 * 
+	 * @param updateQueryString the UPDATE query
+	 */
+	public abstract void executeUpdateQuery(String updateQueryString);
+
+	
+	public abstract void executeCreateGraph(String graph) ;
+
+	
+	public abstract Iterator&lt;String&gt; getGraphs();
+
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

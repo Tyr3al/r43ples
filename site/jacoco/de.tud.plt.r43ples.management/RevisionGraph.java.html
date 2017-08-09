@@ -1,0 +1,448 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RevisionGraph.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">r43ples</a> &gt; <a href="index.source.html" class="el_package">de.tud.plt.r43ples.management</a> &gt; <span class="el_source">RevisionGraph.java</span></div><h1>RevisionGraph.java</h1><pre class="source lang-java linenums">/**
+ * 
+ */
+package de.tud.plt.r43ples.management;
+
+import java.util.ArrayList;
+
+import org.apache.log4j.Logger;
+
+import com.hp.hpl.jena.query.QuerySolution;
+import com.hp.hpl.jena.query.ResultSet;
+
+import de.tud.plt.r43ples.exception.InternalErrorException;
+import de.tud.plt.r43ples.triplestoreInterface.TripleStoreInterfaceSingleton;
+
+/**
+ * The class RevisionGraph provides functionality for one named graph which is managed by R43ples
+ * @author Markus Graube
+ *
+ */
+public class RevisionGraph {
+
+	/** The logger. **/
+<span class="fc" id="L24">	private Logger logger = Logger.getLogger(RevisionManagement.class);</span>
+	
+	private String graphName;
+
+	/**
+	 * 
+	 * @param graphName Uri of the named graph which R43ples manages
+	 */
+<span class="fc" id="L32">	public RevisionGraph(final String graphName){</span>
+<span class="fc" id="L33">		this.graphName = graphName;</span>
+<span class="fc" id="L34">	}</span>
+	
+	
+	
+	/**
+	 * Get the content of this revision graph by execution of CONSTRUCT.
+	 * 
+	 * @param graphName the graphName
+	 * @param format RDF serialization format which should be returned
+	 * @return the constructed graph content as specified RDF serialization format
+	 */
+	public String getContentOfRevisionGraph(final String format) {
+<span class="fc" id="L46">		return RevisionManagement.getContentOfGraph(this.getRevisionGraphUri(), format);	</span>
+	}
+
+
+	/** returns the name of the named graph which stores all revision information for the specified revised named graph
+	 * 
+	 * @return uri of the revision graph for this graph
+	 */
+	public String getRevisionGraphUri() {
+<span class="fc" id="L55">		String query = String.format(</span>
+				  &quot;SELECT ?revisionGraph &quot;
+				+ &quot;WHERE { GRAPH &lt;%s&gt; {&quot;
+				+ &quot;	&lt;%s&gt; &lt;http://eatld.et.tu-dresden.de/rmo#hasRevisionGraph&gt; ?revisionGraph .&quot;
+				+ &quot;} }&quot;, Config.revision_graph, graphName);
+			
+<span class="fc" id="L61">			ResultSet results = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+			
+<span class="fc bfc" id="L63" title="All 2 branches covered.">			if (results.hasNext()) {</span>
+<span class="fc" id="L64">				QuerySolution qs = results.next();</span>
+<span class="fc" id="L65">				return qs.getResource(&quot;?revisionGraph&quot;).toString();</span>
+			} else {
+<span class="fc" id="L67">				return null;</span>
+			}
+	}
+
+	/**
+	 * Checks if the graph has a branch with the given identifier
+	 * 
+	 * @param identifier
+	 *            revision number or branch or tag name of the graph
+	 * @return true if specified revision of the graph is a branch
+	 */
+	public boolean hasBranch(final String identifier) {
+<span class="fc" id="L79">		String revisionGraph = this.getRevisionGraphUri();</span>
+<span class="fc" id="L80">		String queryASK = Config.prefixes</span>
+				+ String.format(&quot;&quot;
+						+ &quot;ASK { GRAPH &lt;%s&gt; { &quot; 
+						+ &quot; ?rev a rmo:Revision. &quot;
+						+ &quot; ?ref a rmo:Reference; rmo:references ?rev .&quot;
+						+ &quot; { ?rev rmo:revisionNumber \&quot;%s\&quot;} UNION { ?ref rdfs:label \&quot;%s\&quot;} }} &quot;,
+						revisionGraph, identifier, identifier);
+<span class="fc" id="L87">		return TripleStoreInterfaceSingleton.get().executeAskQuery(queryASK);</span>
+	}
+	
+	
+	/**
+	 * Check whether the revision graph has a reference with the specified name
+	 * 
+	 * @param referenceName
+	 *            the branch name to check
+	 * @return true when branch already exists elsewhere false
+	 */
+	public boolean hasReference(final String referenceName) {
+<span class="fc" id="L99">		String revisionGraph = this.getRevisionGraphUri();</span>
+<span class="fc" id="L100">		String queryASK = Config.prefixes</span>
+				+ String.format(&quot;ASK { GRAPH &lt;%s&gt; { ?ref a rmo:Reference; rdfs:label \&quot;%s\&quot;.  }} &quot;,
+						revisionGraph, referenceName);
+<span class="fc" id="L103">		return TripleStoreInterfaceSingleton.get().executeAskQuery(queryASK);</span>
+	}
+	
+	/**
+	 * Get the graph URI containing the full copy of a reference for a given
+	 * reference name or revision number
+	 * 
+	 * @param referenceIdentifier
+	 *            reference name or revision number
+	 * @return first graph name of full graph for specified reference and graph
+	 * @throws InternalErrorException 
+	 */
+	public String getReferenceGraph(final String referenceIdentifier) throws InternalErrorException {
+<span class="fc" id="L116">		String revisionGraph = this.getRevisionGraphUri();</span>
+<span class="fc" id="L117">		String query = Config.prefixes + String.format(&quot;&quot; </span>
+				+ &quot;SELECT ?graph &quot; 
+				+ &quot;WHERE { GRAPH  &lt;%s&gt; {&quot; 
+				+ &quot;	?ref a rmo:Reference; &quot;
+				+ &quot;		rmo:references ?rev;&quot; 
+				+ &quot;		rmo:fullGraph ?graph.&quot;
+				+ &quot; ?rev a rmo:Revision.&quot;
+				+ &quot;	{?ref rdfs:label \&quot;%s\&quot;} UNION {?rev rmo:revisionNumber \&quot;%s\&quot;}&quot; 
+				+ &quot;} }&quot;, revisionGraph, referenceIdentifier, referenceIdentifier);
+<span class="fc" id="L126">		this.logger.debug(query);</span>
+<span class="fc" id="L127">		ResultSet resultSet = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+<span class="fc bfc" id="L128" title="All 2 branches covered.">		if (resultSet.hasNext()) {</span>
+<span class="fc" id="L129">			QuerySolution qs = resultSet.next();</span>
+<span class="fc" id="L130">			return qs.getResource(&quot;?graph&quot;).toString();</span>
+		} else {
+<span class="fc" id="L132">			throw new InternalErrorException(&quot;No reference graph found for graph &lt;&quot;+graphName+&quot;&gt; and identifier \&quot;&quot;+ referenceIdentifier+&quot;\&quot;&quot;);</span>
+		}
+	}
+	
+	/**
+	 * Get the MASTER revision number of a graph.
+	 * 
+	 * @param graphName
+	 *            the graph name
+	 * @return the MASTER revision number
+	 */
+	public String getMasterRevisionNumber() {
+<span class="fc" id="L144">		logger.info(&quot;Get MASTER revision number of graph &quot; + graphName);</span>
+
+<span class="fc" id="L146">		String revisionGraph = this.getRevisionGraphUri();</span>
+<span class="fc" id="L147">		String queryString = Config.prefixes + String.format(&quot;&quot;</span>
+				+ &quot;SELECT ?revisionNumber &quot;  
+				+ &quot;WHERE { GRAPH &lt;%s&gt; {&quot;
+				+ &quot;	?master a rmo:Master; rmo:references ?revision . &quot;
+				+ &quot;	?revision rmo:revisionNumber ?revisionNumber . &quot; 
+				+ &quot;} }&quot;, revisionGraph);
+<span class="fc" id="L153">		ResultSet results = TripleStoreInterfaceSingleton.get().executeSelectQuery(queryString);</span>
+<span class="pc bpc" id="L154" title="1 of 2 branches missed.">		if (results.hasNext()){</span>
+<span class="fc" id="L155">			QuerySolution qs = results.next();</span>
+<span class="fc" id="L156">			return qs.getLiteral(&quot;?revisionNumber&quot;).getString();</span>
+		}
+		else {
+<span class="nc" id="L159">			return null;</span>
+		}
+	}
+	
+	/** Returns new unique revision number for this graph
+	 * 
+	 * @return new revision number
+	 * @throws InternalErrorException 
+	 */
+	public String getNextRevisionNumber() throws InternalErrorException {
+		// create UID and check whether the uid number already in named graph exist, if yes , than create it once again,
+		// if not , return this one
+		
+		//UID nextNumberUid = new UID();
+		//String nextNumber = nextNumberUid.toString();
+<span class="fc" id="L174">		int nextNumber = 0;</span>
+		
+<span class="fc" id="L176">		String revisionGraph = this.getRevisionGraphUri();</span>
+<span class="fc" id="L177">		String query = Config.prefixes</span>
+				+ String.format(
+					&quot;SELECT ?nr &quot;
+					+ &quot;WHERE { GRAPH &lt;%s&gt; {&quot;
+					+ &quot;	?rev a rmo:Revision; rmo:revisionNumber ?nr .&quot;
+					+ &quot; } &quot;
+					+ &quot;}ORDER BY DESC(xsd:integer(?nr))&quot;, revisionGraph);
+		try {
+<span class="fc" id="L185">			ResultSet results = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+<span class="fc" id="L186">			QuerySolution qs = results.next();</span>
+<span class="fc" id="L187">			nextNumber = qs.getLiteral(&quot;?nr&quot;).getInt()+1;</span>
+		}
+<span class="nc" id="L189">		catch (Exception e){</span>
+<span class="nc" id="L190">			nextNumber = 0;</span>
+<span class="fc" id="L191">		}</span>
+		
+<span class="fc" id="L193">		int count = 0;</span>
+<span class="pc bpc" id="L194" title="1 of 2 branches missed.">		while (this.hasRevisionNumber(&quot;&quot;+nextNumber)){</span>
+<span class="nc" id="L195">			nextNumber++;</span>
+<span class="nc" id="L196">			count++;</span>
+<span class="nc bnc" id="L197" title="All 2 branches missed.">			if (count==100)</span>
+<span class="nc" id="L198">				throw new InternalErrorException(&quot;No new revision number found&quot;);</span>
+		}
+		
+<span class="fc" id="L201">		return &quot;&quot;+nextNumber;</span>
+	}
+	
+	/**
+	 * Deletes all revision information for this revision graph including all full
+	 * graphs and information in the R43ples system.
+	 * 
+	 */
+	public void purgeRevisionInformation() {
+<span class="fc" id="L210">		logger.info(&quot;Purge revision information of graph &quot; + graphName);</span>
+		// Drop all full graphs as well as add and delete sets which are related
+		// to specified graph
+<span class="fc" id="L213">		String revisionGraph = this.getRevisionGraphUri();</span>
+<span class="fc" id="L214">		String query = Config.prefixes	+ String.format(&quot;&quot;</span>
+				+ &quot;SELECT DISTINCT ?graph &quot;
+				+ &quot;WHERE { GRAPH &lt;%s&gt; {&quot;
+				+ &quot; {?rev rmo:addSet ?graph}&quot; 
+				+ &quot; UNION {?rev rmo:deleteSet ?graph}&quot;
+				+ &quot; UNION {?ref rmo:fullGraph ?graph}&quot;
+				+ &quot;} }&quot;, revisionGraph);
+				
+<span class="fc" id="L222">		ResultSet results = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+<span class="fc bfc" id="L223" title="All 2 branches covered.">		while (results.hasNext()) {</span>
+<span class="fc" id="L224">			QuerySolution qs = results.next();</span>
+<span class="fc bfc" id="L225" title="All 2 branches covered.">			if (qs.get(&quot;?graph&quot;).isResource()) {</span>
+<span class="fc" id="L226">					String graph = qs.getResource(&quot;graph&quot;).toString();</span>
+<span class="fc" id="L227">					TripleStoreInterfaceSingleton.get().executeUpdateQuery(&quot;DROP SILENT GRAPH &lt;&quot; + graph + &quot;&gt;&quot;);</span>
+<span class="fc" id="L228">					logger.debug(&quot;Graph deleted: &quot; + graph);</span>
+			}
+<span class="fc" id="L230">		}</span>
+<span class="fc" id="L231">		TripleStoreInterfaceSingleton.get().executeUpdateQuery(String.format(&quot;DROP SILENT GRAPH &lt;%s&gt;&quot;, revisionGraph));</span>
+		
+		// Remove information from revision graph
+<span class="fc" id="L234">		String queryDelete = Config.prefixes + String.format(</span>
+					   	&quot;DELETE { &quot;
+						+ &quot;GRAPH &lt;%s&gt; {	&lt;%s&gt; ?p ?o.}&quot;
+						+ &quot;}&quot; 
+						+ &quot;WHERE {&quot;
+						+ &quot;	GRAPH &lt;%s&gt; { &lt;%s&gt; a rmo:Graph; ?p ?o.}&quot; 
+						+ &quot;}&quot;
+						, Config.revision_graph, graphName, Config.revision_graph, graphName);
+		
+<span class="fc" id="L243">		TripleStoreInterfaceSingleton.get().executeUpdateQuery(queryDelete);</span>
+<span class="fc" id="L244">	}</span>
+	
+	/**
+	 * get the names of all branches of the revision graph
+	 * @return list of the name of branch
+	 * */
+	public ArrayList&lt;String&gt; getAllBranchNames() {
+<span class="nc" id="L251">		logger.info(&quot;Get all branch names of graph &quot;+ graphName);</span>
+<span class="nc" id="L252">		ArrayList&lt;String&gt; list = new ArrayList&lt;String&gt;();	</span>
+<span class="nc bnc" id="L253" title="All 2 branches missed.">		if (graphName != null) {</span>
+<span class="nc" id="L254">			String revisionGraph = this.getRevisionGraphUri();</span>
+<span class="nc" id="L255">			String sparqlQuery = Config.prefixes</span>
+					+ String.format(
+					  &quot;SELECT DISTINCT ?label %n&quot;
+					+ &quot;FROM &lt;%s&gt; %n&quot;
+					+ &quot;WHERE { %n&quot;
+					+ &quot;	?branch a rmo:Branch ;&quot;
+					+ &quot;		rdfs:label ?label . &quot;
+					+ &quot;} %n&quot;
+					+ &quot;ORDER BY ?label&quot;, revisionGraph);
+			
+<span class="nc" id="L265">			ResultSet results = TripleStoreInterfaceSingleton.get().executeSelectQuery(sparqlQuery);</span>
+<span class="nc bnc" id="L266" title="All 2 branches missed.">			while (results.hasNext()) {</span>
+<span class="nc" id="L267">				QuerySolution qs = results.next();</span>
+<span class="nc" id="L268">				list.add(qs.getLiteral(&quot;label&quot;).toString());</span>
+<span class="nc" id="L269">			}		</span>
+		}
+<span class="nc" id="L271">		logger.debug(&quot;All branches: &quot; +list);</span>
+<span class="nc" id="L272">		return list;</span>
+	}
+	
+	
+	/**
+	 * Get the reference URI of a branch for a given reference name or revision number
+	 * 
+	 * @param referenceIdentifier
+	 *            reference name or revision number
+	 * @return URI of identified revision
+	 * @throws InternalErrorException 
+	 */
+	public String getBranchUri(final String referenceIdentifier) throws InternalErrorException {
+<span class="fc" id="L285">		String revisionGraph = this.getRevisionGraphUri();</span>
+<span class="fc" id="L286">		String query = Config.prefixes</span>
+				+ String.format(&quot;SELECT ?ref &quot; 
+						+ &quot;WHERE { GRAPH &lt;%s&gt; {&quot;
+						+ &quot;	?ref a rmo:Branch; rmo:references ?rev.&quot;
+						+ &quot; ?rev a rmo:Revision.&quot;
+						+ &quot;	{?rev rmo:revisionNumber \&quot;%s\&quot;.} UNION {?ref rdfs:label \&quot;%s\&quot; .}&quot;
+						+ &quot;} }&quot;,
+						revisionGraph, referenceIdentifier, referenceIdentifier);
+<span class="fc" id="L294">		ResultSet resultSet = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+<span class="pc bpc" id="L295" title="1 of 2 branches missed.">		if (resultSet.hasNext()) {</span>
+<span class="fc" id="L296">			QuerySolution qs = resultSet.next();</span>
+<span class="pc bpc" id="L297" title="1 of 2 branches missed.">			if (resultSet.hasNext()) {</span>
+<span class="nc" id="L298">				throw new InternalErrorException(&quot;Identifier is not unique for specified graph name: &quot;</span>
+						+ referenceIdentifier);
+			}
+<span class="fc" id="L301">			return qs.getResource(&quot;?ref&quot;).toString();</span>
+		} else {
+<span class="nc" id="L303">			throw new InternalErrorException(&quot;No Revision or Reference found with identifier: &quot;</span>
+					+ referenceIdentifier);
+		}
+	}
+	
+	/**
+	 * Get the revision URI for a given reference name or revision number
+	 * 
+	 * @param revisionIdentifier
+	 *            reference name or revision number
+	 * @return URI of identified revision
+	 * @throws InternalErrorException 
+	 */
+	public String getRevisionUri(final String revisionIdentifier) throws InternalErrorException {
+<span class="fc" id="L317">		String revisionGraph = this.getRevisionGraphUri();</span>
+<span class="fc" id="L318">		String query = Config.prefixes</span>
+				+ String.format(
+						&quot;SELECT ?rev WHERE { GRAPH &lt;%s&gt; {&quot;
+							+ &quot;{?rev a rmo:Revision; rmo:revisionNumber \&quot;%s\&quot; .}&quot;
+							+ &quot;UNION {?rev a rmo:Revision. ?ref a rmo:Reference; rmo:references ?rev; rdfs:label \&quot;%s\&quot; .}&quot;
+							+ &quot;} }&quot;, revisionGraph, revisionIdentifier, revisionIdentifier);
+<span class="fc" id="L324">		ResultSet resultSet = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+<span class="pc bpc" id="L325" title="1 of 2 branches missed.">		if (resultSet.hasNext()) {</span>
+<span class="fc" id="L326">			QuerySolution qs = resultSet.next();</span>
+<span class="pc bpc" id="L327" title="1 of 2 branches missed.">			if (resultSet.hasNext()) {</span>
+<span class="nc" id="L328">				logger.error(&quot;Identifier not unique: &quot; + revisionIdentifier);</span>
+<span class="nc" id="L329">				throw new InternalErrorException(&quot;Identifier not unique: &quot; + revisionIdentifier);</span>
+			}
+<span class="fc" id="L331">			return qs.getResource(&quot;?rev&quot;).toString();</span>
+		} else {
+<span class="nc" id="L333">			logger.error(&quot;No Revision or Reference found with identifier: &quot; + revisionIdentifier);</span>
+<span class="nc" id="L334">			throw new InternalErrorException(&quot;No Revision or Reference found with identifier: &quot;</span>
+					+ revisionIdentifier);
+		}
+	}
+
+
+
+	/**
+	 * Get the revision number of a given reference name.
+	 * 
+	 * @param referenceName
+	 *            the reference name
+	 * @return the revision number of given reference name
+	 * @throws InternalErrorException 
+	 */
+	public String getRevisionNumber(final String referenceName) throws InternalErrorException {
+<span class="fc" id="L350">		String revisionGraph = this.getRevisionGraphUri();</span>
+<span class="fc" id="L351">		String query = Config.prefixes + String.format(&quot;&quot;</span>
+				+ &quot;SELECT ?revNumber WHERE { GRAPH &lt;%s&gt; {&quot;
+				+ &quot;	?rev a rmo:Revision; rmo:revisionNumber ?revNumber.&quot;
+				+ &quot;	{?rev rmo:revisionNumber \&quot;%s\&quot;.} UNION {?ref a rmo:Reference; rmo:references ?rev; rdfs:label \&quot;%s\&quot;.}&quot;
+				+ &quot;} }&quot;, 
+				revisionGraph, referenceName, referenceName);
+<span class="fc" id="L357">		ResultSet resultSet = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+<span class="pc bpc" id="L358" title="1 of 2 branches missed.">		if (resultSet.hasNext()) {</span>
+<span class="fc" id="L359">			QuerySolution qs = resultSet.next();</span>
+<span class="pc bpc" id="L360" title="1 of 2 branches missed.">			if (resultSet.hasNext()) {</span>
+<span class="nc" id="L361">				throw new InternalErrorException(&quot;Identifier not unique: &quot; + referenceName);</span>
+			}
+<span class="fc" id="L363">			return qs.getLiteral(&quot;?revNumber&quot;).toString();</span>
+		} else {
+<span class="nc" id="L365">			throw new InternalErrorException(&quot;No Revision or Reference found with identifier: &quot;</span>
+					+ referenceName);
+		}
+	}
+
+		
+	/**
+	 * checks whether the revision number already exist
+	 * @param revisionNumber
+	 * @return boolean*/
+	
+	public boolean hasRevisionNumber(final String revisionNumber) {
+<span class="fc" id="L377">		String revisionGraph = this.getRevisionGraphUri();</span>
+<span class="fc" id="L378">		String queryASK = Config.prefixes</span>
+				+ String.format(&quot;&quot;
+						+ &quot;ASK {&quot;
+						+ &quot;	GRAPH &lt;%1$s&gt; { &quot; 
+						+ &quot; 	{ ?rev a rmo:Revision; rmo:revisionNumber \&quot;%2$s\&quot;. }&quot;
+						+ &quot;		UNION &quot;
+						+ &quot;		{?rev a rmo:Revision. ?ref a rmo:Reference; rmo:references ?rev; rdfs:label \&quot;%2$s\&quot; .}&quot;
+						+ &quot;} } &quot;,
+						revisionGraph, revisionNumber);
+<span class="fc" id="L387">		return TripleStoreInterfaceSingleton.get().executeAskQuery(queryASK);</span>
+	}
+	
+	/**
+	 * Get the URI of the full graph of the specified branch if it exists. Otherwise return null
+
+	 * @param branchURI
+	 * @return URI of the full graph
+	 */
+	public String getFullGraphUri(final String branchURI) {
+<span class="fc" id="L397">		String revisionGraph = this.getRevisionGraphUri();</span>
+<span class="fc" id="L398">		String query = String.format(</span>
+				  &quot;SELECT ?fullGraphURI %n&quot;
+			    + &quot;WHERE { GRAPH &lt;%s&gt; {%n&quot;
+				+ &quot;	&lt;%s&gt; &lt;http://eatld.et.tu-dresden.de/rmo#fullGraph&gt; ?fullGraphURI . %n&quot;
+				+ &quot;} }&quot;, revisionGraph, branchURI);
+			
+<span class="fc" id="L404">		ResultSet results = TripleStoreInterfaceSingleton.get().executeSelectQuery(query);</span>
+		
+<span class="pc bpc" id="L406" title="1 of 2 branches missed.">		if (results.hasNext()) {</span>
+<span class="fc" id="L407">			QuerySolution qs = results.next();</span>
+<span class="fc" id="L408">			return qs.getResource(&quot;?fullGraphURI&quot;).toString();</span>
+		} else {
+<span class="nc" id="L410">			return null;</span>
+		}
+	}
+	
+	
+	/** Get SDD for this named graph
+	 * 
+	 * @param sdd
+	 * @return specified SDD if not null otherwise the default SDD for the specified graph
+	 * @throws InternalErrorException
+	 */
+	public String getSDD(String sdd)
+			throws InternalErrorException {
+<span class="pc bpc" id="L423" title="2 of 4 branches missed.">		if (sdd != null &amp;&amp; !sdd.equals(&quot;&quot;)) {</span>
+<span class="fc" id="L424">			return sdd;</span>
+		} else {
+			// Default SDD
+			// Query the referenced SDD
+<span class="nc" id="L428">			String querySDD = String.format(</span>
+					  &quot;PREFIX sddo: &lt;http://eatld.et.tu-dresden.de/sddo#&gt; %n&quot;
+					+ &quot;PREFIX rmo: &lt;http://eatld.et.tu-dresden.de/rmo#&gt; %n&quot;
+					+ &quot;SELECT ?defaultSDD %n&quot;
+					+ &quot;WHERE { GRAPH &lt;%s&gt; {	%n&quot;
+					+ &quot;	&lt;%s&gt; a rmo:Graph ;%n&quot;
+					+ &quot;		sddo:hasDefaultSDD ?defaultSDD . %n&quot;
+					+ &quot;} }&quot;, Config.revision_graph, this.graphName);
+			
+<span class="nc" id="L437">			ResultSet resultSetSDD = TripleStoreInterfaceSingleton.get().executeSelectQuery(querySDD);</span>
+<span class="nc bnc" id="L438" title="All 2 branches missed.">			if (resultSetSDD.hasNext()) {</span>
+<span class="nc" id="L439">				QuerySolution qs = resultSetSDD.next();</span>
+<span class="nc" id="L440">				return qs.getResource(&quot;?defaultSDD&quot;).toString();</span>
+			} else {
+<span class="nc" id="L442">				throw new InternalErrorException(&quot;Error in revision graph! Selected graph &lt;&quot; + this.graphName + &quot;&gt; has no default SDD referenced.&quot;);</span>
+			}
+		}
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>
